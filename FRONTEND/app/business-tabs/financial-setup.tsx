@@ -1,9 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Dimensions, Animated, LayoutAnimation, Platform, UIManager } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { showAlert } from '@/utils/alert';
+import { showToast } from '@/utils/toast';
 
 // Enable LayoutAnimation for Android
 if (Platform.OS === 'android') {
@@ -21,6 +21,7 @@ const MONTHS = [
 
 export default function FinancialSetupScreen() {
     const router = useRouter();
+    const params = useLocalSearchParams();
     const [currency, setCurrency] = useState('🇰🇪 KES - Kenyan Shilling');
     const [yearStart, setYearStart] = useState('January');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -67,8 +68,11 @@ export default function FinancialSetupScreen() {
     };
 
     const handleContinue = () => {
-        console.log({ currency, yearStart, yearEnd: getYearEnd(yearStart) });
-        router.replace('/(tabs)');
+        // Navigate to tax and invoice
+        router.push({
+            pathname: '/business-tabs/tax-and-invoice',
+            params: { ...params, currency, yearStart }
+        });
     };
 
     const handleBack = () => {
@@ -104,7 +108,7 @@ export default function FinancialSetupScreen() {
                         />
                         <TouchableOpacity
                             style={styles.changeButton}
-                            onPress={() => showAlert('Info', 'Currency selection will be available in the next update.')}
+                            onPress={() => showToast.success('Info', 'Currency selection will be available in the next update.')}
                         >
                             <Text style={styles.changeButtonText}>Change</Text>
                         </TouchableOpacity>

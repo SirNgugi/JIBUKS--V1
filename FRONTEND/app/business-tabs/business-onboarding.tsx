@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Dimens
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { showAlert } from '@/utils/alert';
+import { showToast } from '@/utils/toast';
 
 const { width } = Dimensions.get('window');
 
@@ -68,15 +68,15 @@ export default function BusinessOnboardingScreen() {
 
     const handleContinue = () => {
         if (!businessName.trim()) {
-            showAlert('Error', 'Please enter your business name');
+            showToast.error('Error', 'Please enter your business name');
             return;
         }
         if (!industry.trim()) {
-            showAlert('Error', 'Please select your industry');
+            showToast.error('Error', 'Please select your industry');
             return;
         }
         if (!salesType) {
-            showAlert('Error', 'Please select what you sell');
+            showToast.error('Error', 'Please select what you sell');
             return;
         }
 
@@ -84,7 +84,10 @@ export default function BusinessOnboardingScreen() {
         console.log({ businessName, industry, salesType });
 
         // Navigate to contact information
-        router.push('/contact-information');
+        router.push({
+            pathname: '/business-tabs/contact-information',
+            params: { businessName, industry, salesType }
+        });
     };
 
     const handleBack = () => {

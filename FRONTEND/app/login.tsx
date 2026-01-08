@@ -3,11 +3,12 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useAuth } from '@/contexts/AuthContext'
+import { showToast } from '@/utils/toast'
 
 const Login = () => {
   const router = useRouter()
   const { login, isLoading, error, clearError } = useAuth()
-  
+
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -15,10 +16,10 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
 
-  // Show error alert when login fails
+  // Show error toast when login fails
   useEffect(() => {
     if (error) {
-      Alert.alert('Login Error', error)
+      showToast.error('Login Error', error)
       clearError()
     }
   }, [error])
@@ -32,20 +33,16 @@ const Login = () => {
 
   const handleLogin = async () => {
     if (!formData.email || !formData.password) {
-      Alert.alert('Error', 'Please fill in all fields')
+      showToast.error('Error', 'Please fill in all fields')
       return
     }
 
     try {
       await login(formData)
-      
-      Alert.alert('Success', 'Login successful!', [
-        {
-          text: 'OK',
-          onPress: () => router.replace('/welcome')
-        }
-      ])
-      
+
+      showToast.success('Login Successful', 'Welcome back!')
+      router.replace('/welcome')
+
     } catch (error) {
       console.error('Login error:', error)
       // Error is handled by useEffect above
@@ -67,14 +64,14 @@ const Login = () => {
   }
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         {/* Logo Section */}
         <View style={styles.logoSection}>
-          <Image 
+          <Image
             source={require('../assets/images/homepage.png')} // Replace with homepage.png when you add it
             style={styles.logo}
             resizeMode="contain"
@@ -121,10 +118,10 @@ const Login = () => {
                 style={styles.eyeButton}
                 onPress={() => setShowPassword(!showPassword)}
               >
-                <Ionicons 
-                  name={showPassword ? "eye-outline" : "eye-off-outline"} 
-                  size={20} 
-                  color="#666" 
+                <Ionicons
+                  name={showPassword ? "eye-outline" : "eye-off-outline"}
+                  size={20}
+                  color="#666"
                 />
               </TouchableOpacity>
             </View>
@@ -132,7 +129,7 @@ const Login = () => {
 
           {/* Remember Me and Forgot Password */}
           <View style={styles.optionsContainer}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.rememberContainer}
               onPress={() => setRememberMe(!rememberMe)}
             >
@@ -148,7 +145,7 @@ const Login = () => {
           </View>
 
           {/* Login Button */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
             onPress={handleLogin}
             disabled={isLoading}
@@ -168,7 +165,7 @@ const Login = () => {
           </View>
 
           {/* Google Login Button */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.googleButton}
             onPress={handleGoogleLogin}
           >

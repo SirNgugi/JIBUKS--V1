@@ -1,21 +1,22 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { showAlert } from '@/utils/alert';
+import { showToast } from '@/utils/toast';
 
 const { width } = Dimensions.get('window');
 
 export default function ContactInformationScreen() {
     const router = useRouter();
+    const params = useLocalSearchParams();
     const [address, setAddress] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
     const [email, setEmail] = useState('');
 
     const handleContinue = () => {
         if (!phoneNumber.trim()) {
-            showAlert('Error', 'Please enter your phone number');
+            showToast.error('Error', 'Please enter your phone number');
             return;
         }
 

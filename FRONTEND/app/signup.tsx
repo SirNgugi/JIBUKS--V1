@@ -3,11 +3,12 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useAuth } from '@/contexts/AuthContext'
+import { showToast } from '@/utils/toast'
 
 const Signup = () => {
   const router = useRouter()
   const { register, isLoading, error, clearError } = useAuth()
-  
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -19,10 +20,10 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
-  // Show error alert when registration fails
+  // Show error toast when registration fails
   useEffect(() => {
     if (error) {
-      Alert.alert('Registration Error', error)
+      showToast.error('Error', error)
       clearError()
     }
   }, [error])
@@ -37,12 +38,12 @@ const Signup = () => {
   const handleContinue = async () => {
     // Client-side validation
     if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
-      Alert.alert('Error', 'Please fill in all required fields')
+      showToast.error('Error', 'Please fill in all required fields')
       return
     }
 
     if (formData.password !== formData.confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match')
+      showToast.error('Error', 'Passwords do not match')
       return
     }
 
@@ -58,14 +59,10 @@ const Signup = () => {
 
     try {
       await register(registrationData)
-      
-      Alert.alert('Success', 'Registration successful!', [
-        {
-          text: 'OK',
-          onPress: () => router.replace('/welcome')
-        }
-      ])
-      
+
+      showToast.success('Successfully registered', 'Welcome to JIBUKS!')
+      router.replace('/welcome')
+
     } catch (error: any) {
       console.error('Registration error:', error)
       // Error is handled by useEffect above
@@ -78,14 +75,14 @@ const Signup = () => {
   }
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
           >
@@ -168,10 +165,10 @@ const Signup = () => {
                 style={styles.eyeButton}
                 onPress={() => setShowPassword(!showPassword)}
               >
-                <Ionicons 
-                  name={showPassword ? "eye-outline" : "eye-off-outline"} 
-                  size={20} 
-                  color="#666" 
+                <Ionicons
+                  name={showPassword ? "eye-outline" : "eye-off-outline"}
+                  size={20}
+                  color="#666"
                 />
               </TouchableOpacity>
             </View>
@@ -194,10 +191,10 @@ const Signup = () => {
                 style={styles.eyeButton}
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               >
-                <Ionicons 
-                  name={showConfirmPassword ? "eye-outline" : "eye-off-outline"} 
-                  size={20} 
-                  color="#666" 
+                <Ionicons
+                  name={showConfirmPassword ? "eye-outline" : "eye-off-outline"}
+                  size={20}
+                  color="#666"
                 />
               </TouchableOpacity>
             </View>
@@ -205,7 +202,7 @@ const Signup = () => {
         </View>
 
         {/* Continue Button */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.continueButton, isLoading && styles.continueButtonDisabled]}
           onPress={handleContinue}
           disabled={isLoading}

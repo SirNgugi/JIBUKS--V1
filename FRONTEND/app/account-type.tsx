@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { showToast } from '@/utils/toast';
 
 const { width } = Dimensions.get('window');
 
@@ -13,12 +14,13 @@ export default function AccountTypeScreen() {
 
   const handleSelectType = (type: AccountType) => {
     setSelectedType(type);
+    showToast.success('Selection Saved', `You chose ${type} management.`);
     // Navigate based on account type after a short delay to show selection
     setTimeout(() => {
       if (type === 'family') {
         router.push('/family-setup');
       } else if (type === 'business') {
-        router.push('/business-onboarding');
+        router.push('/business-tabs/business-onboarding');
       } else {
         // For 'both', maybe go to family first then business? 
         // Or create a combined flow. For now, defaulting to family setup.
