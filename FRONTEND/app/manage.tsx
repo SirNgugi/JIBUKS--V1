@@ -207,21 +207,22 @@ export default function ManageScreen() {
           ))}
         </View>
 
+
         {/* Quick Actions */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
 
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => router.push('/accounts' as any)}
+            onPress={() => router.push('/reports' as any)}
           >
             <View style={styles.actionLeft}>
               <View style={[styles.actionIcon, { backgroundColor: '#dbeafe' }]}>
-                <Ionicons name="list" size={24} color="#2563eb" />
+                <Ionicons name="stats-chart" size={24} color="#2563eb" />
               </View>
               <View>
-                <Text style={styles.actionTitle}>Chart of Accounts</Text>
-                <Text style={styles.actionSubtitle}>View all financial accounts</Text>
+                <Text style={styles.actionTitle}>Financial Reports</Text>
+                <Text style={styles.actionSubtitle}>View business analytics & insights</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
@@ -238,22 +239,6 @@ export default function ManageScreen() {
               <View>
                 <Text style={styles.actionTitle}>Family Settings</Text>
                 <Text style={styles.actionSubtitle}>Manage family members & permissions</Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionCard}
-            onPress={() => router.push('/monthly-budgets' as any)}
-          >
-            <View style={styles.actionLeft}>
-              <View style={[styles.actionIcon, { backgroundColor: '#fef3c7' }]}>
-                <Ionicons name="wallet" size={24} color="#f59e0b" />
-              </View>
-              <View>
-                <Text style={styles.actionTitle}>Budgets</Text>
-                <Text style={styles.actionSubtitle}>Set & manage monthly budgets</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#9ca3af" />

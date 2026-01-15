@@ -20,13 +20,13 @@ export const AccountsProvider = ({ children }: { children: ReactNode }) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await apiService.listAccounts();
+      // Fetch accounts with balances from backend
+      const data = await apiService.listAccounts({ includeBalances: true });
       setAccounts(data || []);
     } catch (err: any) {
-      // Silently fail - accounts are optional for now
-      console.warn('Accounts not available:', err?.error || err);
-      setError(null); // Don't show error to user
-      setAccounts([]); // Empty accounts is fine
+      console.error('Error loading accounts:', err);
+      setError(err?.message || 'Failed to load accounts');
+      setAccounts([]); // Empty accounts on error
     } finally {
       setLoading(false);
     }

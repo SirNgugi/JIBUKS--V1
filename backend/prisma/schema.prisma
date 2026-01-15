@@ -7,10 +7,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Tenant Types
+enum TenantType {
+  FAMILY
+  BUSINESS
+}
+
 model Tenant {
   id                    Int                    @id @default(autoincrement())
   name                  String                 @unique
   slug                  String                 @unique
+  tenantType            TenantType             @default(FAMILY) @map("tenant_type")
   metadata              Json?
   createdAt             DateTime               @default(now()) @map("created_at")
   ownerEmail            String?                @map("owner_email")
@@ -22,8 +29,116 @@ model Tenant {
   categories            Category[]
   paymentMethods        PaymentMethod[]
   recurringTransactions RecurringTransaction[]
+  accounts              Account[]
+  journals              Journal[]
+  vendors               Vendor[]
+  purchases             Purchase[]
+  inventoryItems        InventoryItem[]
+  stockMovements        StockMovement[]
+  bankTransactions      BankTransaction[]
+  fixedAssets           FixedAsset[]
+  customers             Customer[]
+  invoices              Invoice[]
 
   @@map("tenants")
+}
+
+// ============================================
+// ACCOUNTING MODELS - Double-Entry Bookkeeping
+// ============================================
+
+// Account Types for Chart of Accounts
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  INCOME
+  EXPENSE
+}
+
+// Chart of Accounts
+model Account {
+  id              Int           @id @default(autoincrement())
+  tenantId        Int           @map("tenant_id")
+  code            String        // Account code (e.g., '1000', '4010')
+  name            String        // Display name (e.g., 'Cash on Hand')
+  type            AccountType   // ASSET, LIABILITY, EQUITY, INCOME, EXPENSE
+  description     String?
+  parentId        Int?          @map("parent_id")
+  isSystem        Boolean       @default(false) @map("is_system") // System accounts can't be deleted
+  isActive        Boolean       @default(true) @map("is_active")
+  currency        String        @default("KES")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent          Account?      @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children        Account[]     @relation("AccountHierarchy")
+  journalLines    JournalLine[]
+  invoiceItems    InvoiceItem[]
+  invoicePayments InvoicePayment[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([type])
+  @@map("accounts")
+}
+
+// Journal Entry (Header)
+model Journal {
+  id              Int           @id @default(autoincrement())
+  tenantId        Int           @map("tenant_id")
+  reference       String?       // Optional reference number
+  date            DateTime      @default(now())
+  description     String
+  status          JournalStatus @default(POSTED)
+  createdById     Int?          @map("created_by_id")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lines           JournalLine[]
+  transactions    Transaction[]
+  purchases       Purchase[]
+  purchasePayments PurchasePayment[]
+  stockMovements  StockMovement[]
+  bankTransactions BankTransaction[]
+  depreciationEntries DepreciationEntry[]
+  invoices        Invoice[]
+  invoicePayments InvoicePayment[]
+
+  @@index([tenantId])
+  @@index([date])
+  @@map("journals")
+}
+
+enum JournalStatus {
+  DRAFT
+  POSTED
+  VOID
+}
+
+// Journal Line (Debit/Credit Entry)
+// Each line connects to ONE account with either a debit or credit amount
+// A journal entry has multiple lines that must balance (total debits = total credits)
+model JournalLine {
+  id              Int           @id @default(autoincrement())
+  journalId       Int           @map("journal_id")
+  accountId       Int           @map("account_id")
+  debit           Decimal       @default(0) // Debit amount
+  credit          Decimal       @default(0) // Credit amount
+  description     String?
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  // Relations
+  journal         Journal       @relation(fields: [journalId], references: [id], onDelete: Cascade)
+  account         Account       @relation(fields: [accountId], references: [id])
+
+  @@index([journalId])
+  @@index([accountId])
+  @@map("journal_lines")
 }
 
 model User {
@@ -93,25 +208,35 @@ enum Role {
 }
 
 model Transaction {
-  id            Int             @id @default(autoincrement())
-  tenantId      Int             @map("tenant_id")
-  userId        Int             @map("user_id")
-  type          TransactionType
-  amount        Decimal
-  category      String
-  description   String?
-  date          DateTime        @default(now())
-  paymentMethod String?         @map("payment_method")
-  notes         String?
-  createdAt     DateTime        @default(now()) @map("created_at")
-  updatedAt     DateTime        @updatedAt @map("updated_at")
-  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              Int             @id @default(autoincrement())
+  tenantId        Int             @map("tenant_id")
+  userId          Int             @map("user_id")
+  type            TransactionType
+  amount          Decimal
+  category        String
+  description     String?
+  date            DateTime        @default(now())
+  paymentMethod   String?         @map("payment_method")
+  notes           String?
+  
+  // Accounting Integration
+  journalId       Int?            @map("journal_id")
+  debitAccountId  Int?            @map("debit_account_id")
+  creditAccountId Int?            @map("credit_account_id")
+  
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  
+  // Relations
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  journal         Journal?        @relation(fields: [journalId], references: [id])
 
   @@index([tenantId])
   @@index([userId])
   @@index([type])
   @@index([date])
+  @@index([journalId])
   @@map("transactions")
 }
 
@@ -174,4 +299,380 @@ enum GoalStatus {
 enum TransactionType {
   INCOME
   EXPENSE
+  TRANSFER
+  PURCHASE
+  SALE
+  DEPOSIT
+  WITHDRAWAL
 }
+
+// ============================================
+// PROFESSIONAL ACCOUNTING MODELS
+// ============================================
+
+// Vendor/Supplier Management
+model Vendor {
+  id              Int        @id @default(autoincrement())
+  tenantId        Int        @map("tenant_id")
+  name            String
+  email           String?
+  phone           String?
+  address         String?
+  taxId           String?    @map("tax_id")
+  paymentTerms    String?    @map("payment_terms") // "Net 30", "Due on Receipt"
+  balance         Decimal    @default(0) // Current outstanding balance
+  isActive        Boolean    @default(true) @map("is_active")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+  
+  tenant          Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  purchases       Purchase[]
+  
+  @@index([tenantId])
+  @@map("vendors")
+}
+
+// Purchase/Bill Management
+model Purchase {
+  id              Int              @id @default(autoincrement())
+  tenantId        Int              @map("tenant_id")
+  vendorId        Int?             @map("vendor_id")
+  billNumber      String?          @map("bill_number") // Vendor's invoice number
+  purchaseDate    DateTime         @default(now()) @map("purchase_date")
+  dueDate         DateTime?        @map("due_date")
+  status          PurchaseStatus   @default(UNPAID)
+  subtotal        Decimal
+  tax             Decimal          @default(0)
+  discount        Decimal          @default(0)
+  total           Decimal
+  amountPaid      Decimal          @default(0) @map("amount_paid")
+  notes           String?
+  journalId       Int?             @map("journal_id")
+  createdById     Int              @map("created_by_id")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vendor          Vendor?          @relation(fields: [vendorId], references: [id])
+  journal         Journal?         @relation(fields: [journalId], references: [id])
+  items           PurchaseItem[]
+  payments        PurchasePayment[]
+  
+  @@index([tenantId])
+  @@index([vendorId])
+  @@index([status])
+  @@map("purchases")
+}
+
+enum PurchaseStatus {
+  DRAFT
+  UNPAID
+  PARTIAL
+  PAID
+  CANCELLED
+}
+
+// Purchase Line Items
+model PurchaseItem {
+  id              Int      @id @default(autoincrement())
+  purchaseId      Int      @map("purchase_id")
+  description     String
+  quantity        Decimal
+  unitPrice       Decimal  @map("unit_price")
+  amount          Decimal
+  accountId       Int?     @map("account_id") // Expense/Asset account
+  inventoryItemId Int?     @map("inventory_item_id")
+  
+  purchase        Purchase        @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  inventoryItem   InventoryItem?  @relation(fields: [inventoryItemId], references: [id])
+  
+  @@index([purchaseId])
+  @@map("purchase_items")
+}
+
+// Purchase Payments
+model PurchasePayment {
+  id              Int      @id @default(autoincrement())
+  purchaseId      Int      @map("purchase_id")
+  amount          Decimal
+  paymentDate     DateTime @default(now()) @map("payment_date")
+  paymentMethod   String   @map("payment_method")
+  reference       String?  // Cheque number, transaction ID
+  notes           String?
+  journalId       Int?     @map("journal_id")
+  
+  purchase        Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  journal         Journal? @relation(fields: [journalId], references: [id])
+  
+  @@index([purchaseId])
+  @@map("purchase_payments")
+}
+
+// Inventory/Stock Management
+model InventoryItem {
+  id              Int             @id @default(autoincrement())
+  tenantId        Int             @map("tenant_id")
+  sku             String          // Stock Keeping Unit
+  name            String
+  description     String?
+  category        String?
+  unit            String          @default("pcs") // "pcs", "kg", "liters"
+  costPrice       Decimal         @map("cost_price")
+  sellingPrice    Decimal         @map("selling_price")
+  quantity        Decimal         @default(0)
+  reorderLevel    Decimal?        @map("reorder_level")
+  assetAccountId  Int             @map("asset_account_id") // Inventory Asset account
+  cogsAccountId   Int             @map("cogs_account_id")  // Cost of Goods Sold account
+  isActive        Boolean         @default(true) @map("is_active")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  movements       StockMovement[]
+  purchaseItems   PurchaseItem[]
+  
+  @@unique([tenantId, sku])
+  @@index([tenantId])
+  @@map("inventory_items")
+}
+
+// Stock Movements
+model StockMovement {
+  id              Int          @id @default(autoincrement())
+  tenantId        Int          @map("tenant_id")
+  itemId          Int          @map("item_id")
+  type            MovementType
+  quantity        Decimal
+  unitCost        Decimal?     @map("unit_cost")
+  reference       String?      // Purchase ID, Sale ID, Adjustment ID
+  date            DateTime     @default(now())
+  notes           String?
+  journalId       Int?         @map("journal_id")
+  createdById     Int?         @map("created_by_id")
+  
+  tenant          Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  item            InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  journal         Journal?     @relation(fields: [journalId], references: [id])
+  
+  @@index([tenantId])
+  @@index([itemId])
+  @@index([date])
+  @@map("stock_movements")
+}
+
+enum MovementType {
+  IN          // Stock received (purchase, return)
+  OUT         // Stock sold or used
+  ADJUSTMENT  // Manual adjustment
+  TRANSFER    // Transfer between locations
+}
+
+// Bank Transactions (Deposits, Cheques, Transfers)
+model BankTransaction {
+  id              Int                 @id @default(autoincrement())
+  tenantId        Int                 @map("tenant_id")
+  bankAccountId   Int                 @map("bank_account_id") // From Chart of Accounts
+  type            BankTransactionType
+  amount          Decimal
+  date            DateTime            @default(now())
+  chequeNumber    String?             @map("cheque_number")
+  reference       String?
+  payee           String?             // Who received/paid
+  description     String
+  status          BankStatus          @default(CLEARED)
+  journalId       Int?                @map("journal_id")
+  reconciled      Boolean             @default(false)
+  reconciledDate  DateTime?           @map("reconciled_date")
+  createdById     Int?                @map("created_by_id")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+  
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  journal         Journal?            @relation(fields: [journalId], references: [id])
+  
+  @@index([tenantId])
+  @@index([bankAccountId])
+  @@index([date])
+  @@map("bank_transactions")
+}
+
+enum BankTransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  CHEQUE
+  TRANSFER
+  FEE
+  INTEREST
+}
+
+enum BankStatus {
+  PENDING
+  CLEARED
+  BOUNCED
+  CANCELLED
+}
+
+// Fixed Assets Management
+model FixedAsset {
+  id                      Int                  @id @default(autoincrement())
+  tenantId                Int                  @map("tenant_id")
+  name                    String
+  description             String?
+  assetNumber             String?              @map("asset_number")
+  purchaseDate            DateTime             @map("purchase_date")
+  purchasePrice           Decimal              @map("purchase_price")
+  salvageValue            Decimal              @default(0) @map("salvage_value")
+  usefulLife              Int                  @map("useful_life") // in months
+  depreciationMethod      DepreciationMethod   @default(STRAIGHT_LINE) @map("depreciation_method")
+  assetAccountId          Int                  @map("asset_account_id")
+  depreciationAccountId   Int                  @map("depreciation_account_id")
+  accumulatedDepreciation Decimal              @default(0) @map("accumulated_depreciation")
+  currentValue            Decimal              @map("current_value")
+  isActive                Boolean              @default(true) @map("is_active")
+  createdAt               DateTime             @default(now()) @map("created_at")
+  updatedAt               DateTime             @updatedAt @map("updated_at")
+  
+  tenant                  Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  depreciationEntries     DepreciationEntry[]
+  
+  @@index([tenantId])
+  @@map("fixed_assets")
+}
+
+enum DepreciationMethod {
+  STRAIGHT_LINE
+  DECLINING_BALANCE
+  UNITS_OF_PRODUCTION
+}
+
+// Depreciation Entries
+model DepreciationEntry {
+  id              Int        @id @default(autoincrement())
+  assetId         Int        @map("asset_id")
+  period          DateTime   // Month/Year of depreciation
+  amount          Decimal
+  journalId       Int?       @map("journal_id")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  
+  asset           FixedAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  journal         Journal?   @relation(fields: [journalId], references: [id])
+  
+  @@index([assetId])
+  @@index([period])
+  @@map("depreciation_entries")
+}
+
+// ============================================
+// SALES & INVOICING - QuickBooks Style
+// ============================================
+
+// Customers (like Vendors but for sales)
+model Customer {
+  id            Int       @id @default(autoincrement())
+  tenantId      Int       @map("tenant_id")
+  name          String
+  email         String?
+  phone         String?
+  address       String?
+  city          String?
+  state         String?
+  zipCode       String?   @map("zip_code")
+  country       String?   @default("Kenya")
+  paymentTerms  String?   @default("Net 30") @map("payment_terms") // Net 30, Due on Receipt, etc.
+  creditLimit   Decimal?  @map("credit_limit")
+  balance       Decimal   @default(0) // Amount owed by customer
+  taxNumber     String?   @map("tax_number")
+  notes         String?
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoices      Invoice[]
+  
+  @@index([tenantId])
+  @@index([name])
+  @@map("customers")
+}
+
+// Sales Invoices
+model Invoice {
+  id            Int              @id @default(autoincrement())
+  tenantId      Int              @map("tenant_id")
+  customerId    Int              @map("customer_id")
+  invoiceNumber String?          @map("invoice_number")
+  invoiceDate   DateTime         @map("invoice_date")
+  dueDate       DateTime?        @map("due_date")
+  subtotal      Decimal
+  tax           Decimal          @default(0)
+  discount      Decimal          @default(0)
+  total         Decimal
+  amountPaid    Decimal          @default(0) @map("amount_paid")
+  status        InvoiceStatus    @default(UNPAID)
+  notes         String?
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+  
+  tenant        Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer      Customer         @relation(fields: [customerId], references: [id])
+  items         InvoiceItem[]
+  payments      InvoicePayment[]
+  journals      Journal[]
+  
+  @@index([tenantId])
+  @@index([customerId])
+  @@index([status])
+  @@index([invoiceDate])
+  @@map("invoices")
+}
+
+// Invoice Line Items
+model InvoiceItem {
+  id              Int            @id @default(autoincrement())
+  invoiceId       Int            @map("invoice_id")
+  description     String
+  quantity        Decimal
+  unitPrice       Decimal        @map("unit_price")
+  amount          Decimal
+  accountId       Int?           @map("account_id") // Revenue account
+  inventoryItemId Int?           @map("inventory_item_id")
+  
+  invoice         Invoice        @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  account         Account?       @relation(fields: [accountId], references: [id])
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id])
+  
+  @@index([invoiceId])
+  @@map("invoice_items")
+}
+
+// Invoice Payments
+model InvoicePayment {
+  id            Int       @id @default(autoincrement())
+  invoiceId     Int       @map("invoice_id")
+  amount        Decimal
+  paymentDate   DateTime  @map("payment_date")
+  paymentMethod String    @map("payment_method")
+  bankAccountId Int?      @map("bank_account_id")
+  reference     String?
+  notes         String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  
+  invoice       Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  bankAccount   Account?  @relation(fields: [bankAccountId], references: [id])
+  journals      Journal[]
+  
+  @@index([invoiceId])
+  @@index([paymentDate])
+  @@map("invoice_payments")
+}
+
+// Invoice Status
+enum InvoiceStatus {
+  DRAFT
+  UNPAID
+  PARTIAL
+  PAID
+  CANCELLED
+  OVERDUE
+}
+

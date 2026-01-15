@@ -108,9 +108,11 @@ export default function AccountsScreen() {
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Chart of Accounts</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={() => useAccounts().refresh()} style={styles.backButton}>
+            <Ionicons name="refresh" size={24} color="#fff" />
+          </TouchableOpacity>
         </View>
-        <Text style={styles.headerSubtitle}>Family Finance Accounts</Text>
+        <Text style={styles.headerSubtitle}>{accounts.length} Accounts • Real-time Balances</Text>
       </LinearGradient>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -164,9 +166,9 @@ export default function AccountsScreen() {
                         <View style={{ flex: 1 }}>
                           <View style={styles.accountHeader}>
                             <Text style={styles.accountName}>{account.name}</Text>
-                            {account.isDefault && (
+                            {account.isSystem && (
                               <View style={styles.defaultBadge}>
-                                <Text style={styles.defaultBadgeText}>Default</Text>
+                                <Text style={styles.defaultBadgeText}>System</Text>
                               </View>
                             )}
                           </View>

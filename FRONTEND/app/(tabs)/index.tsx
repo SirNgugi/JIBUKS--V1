@@ -50,7 +50,6 @@ export default function HomeScreen() {
         familyName: data.familyMembers?.[0]?.name || 'Your Family',
         totalMembers: data.familyMembers?.length || 0,
         activeGoals: data.goals?.length || 0,
-        totalBudget: data.budgets?.reduce((sum: number, b: any) => sum + Number(b.amount), 0) || 0,
         monthlySpending: Number(data.summary?.totalExpenses) || 0,
         recentGoals: data.goals?.slice(0, 3).map((g: any) => ({
           id: g.id,
@@ -59,14 +58,6 @@ export default function HomeScreen() {
           target: Number(g.targetAmount),
           deadline: g.targetDate ? new Date(g.targetDate).toLocaleDateString() : 'No deadline'
         })) || [],
-        budgetOverview: data.budgets?.slice(0, 3).map((b: any) => {
-          const spent = data.categorySpending?.find((c: any) => c.category === b.category)?.amount || 0;
-          return {
-            category: b.category,
-            allocated: Number(b.amount),
-            spent: Number(spent)
-          };
-        }) || [],
         recentTransactions: data.recentTransactions?.slice(0, 4).map((t: any) => ({
           id: t.id,
           name: t.description || t.category,
@@ -272,15 +263,6 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.statsRow}>
-            {/* Total Budget */}
-            <View style={styles.statCard}>
-              <View style={[styles.iconCircle, { backgroundColor: '#d1fae5' }]}>
-                <Ionicons name="wallet" size={24} color="#10b981" />
-              </View>
-              <Text style={styles.statValue}>{formatCurrency(dashboardData.totalBudget)}</Text>
-              <Text style={styles.statLabel}>Total Budget</Text>
-            </View>
-
             {/* This Month's Spending */}
             <View style={styles.statCard}>
               <View style={[styles.iconCircle, { backgroundColor: '#fce7f3' }]}>
@@ -292,51 +274,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Progress Cards Row */}
-        {dashboardData.budgetOverview && dashboardData.budgetOverview.length > 0 && dashboardData.recentGoals && dashboardData.recentGoals.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.progressCardsRow}>
-              {/* Monthly Budget Progress */}
-              {dashboardData.budgetOverview[0] && (
-                <View style={styles.progressCard}>
-                  <Text style={styles.progressCardTitle}>{dashboardData.budgetOverview[0].category.toUpperCase()} BUDGET</Text>
-                  <View style={styles.progressBarContainer}>
-                    <View style={[
-                      styles.progressBar,
-                      {
-                        width: `${Math.min(calculateProgress(dashboardData.budgetOverview[0].spent, dashboardData.budgetOverview[0].allocated), 100)}%`,
-                        backgroundColor: '#f59e0b'
-                      }
-                    ]} />
-                  </View>
-                  <View style={styles.progressCardDetails}>
-                    <Text style={styles.progressCardText}>Spent: {formatCurrency(dashboardData.budgetOverview[0].spent)}</Text>
-                    <Text style={styles.progressCardText}>Left: {formatCurrency(dashboardData.budgetOverview[0].allocated - dashboardData.budgetOverview[0].spent)}</Text>
-                  </View>
-                </View>
-              )}
 
-              {/* Goal Progress */}
-              {dashboardData.recentGoals[0] && (
-                <View style={styles.progressCard}>
-                  <Text style={styles.progressCardTitle}>{dashboardData.recentGoals[0].name.toUpperCase()}</Text>
-                  <View style={styles.progressBarContainer}>
-                    <View style={[
-                      styles.progressBar,
-                      {
-                        width: `${calculateProgress(dashboardData.recentGoals[0].current, dashboardData.recentGoals[0].target)}%`,
-                        backgroundColor: '#2563eb'
-                      }
-                    ]} />
-                  </View>
-                  <Text style={styles.progressCardAmount}>
-                    {formatCurrency(dashboardData.recentGoals[0].current)} / {formatCurrency(dashboardData.recentGoals[0].target)}
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
-        )}
 
         {/* Action Buttons */}
         <View style={styles.section}>
@@ -387,6 +325,119 @@ export default function HomeScreen() {
                 <Ionicons name="settings" size={24} color="#fff" />
               </View>
               <Text style={styles.actionButtonLabel}>Manage</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Premium Business Cards - No Title */}
+        <View style={styles.section}>
+          <View style={styles.businessGrid}>
+            {/* Purchases Card */}
+            <TouchableOpacity
+              style={styles.businessCard}
+              onPress={() => router.push('/purchases' as any)}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#fef3c7', '#fde68a']}
+                style={styles.businessGradient}
+              >
+                <View style={styles.businessIconContainer}>
+                  <Ionicons name="receipt" size={28} color="#f59e0b" />
+                </View>
+                <Text style={styles.businessCardTitle}>Bills & Purchases</Text>
+                <Text style={styles.businessCardSubtitle}>Manage vendor payments</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* Inventory Card */}
+            <TouchableOpacity
+              style={styles.businessCard}
+              onPress={() => router.push('/inventory' as any)}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#d1fae5', '#a7f3d0']}
+                style={styles.businessGradient}
+              >
+                <View style={styles.businessIconContainer}>
+                  <Ionicons name="cube" size={28} color="#10b981" />
+                </View>
+                <Text style={styles.businessCardTitle}>Inventory</Text>
+                <Text style={styles.businessCardSubtitle}>Stock & valuation</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* Banking Card */}
+            <TouchableOpacity
+              style={styles.businessCard}
+              onPress={() => router.push('/banking' as any)}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#dbeafe', '#bfdbfe']}
+                style={styles.businessGradient}
+              >
+                <View style={styles.businessIconContainer}>
+                  <Ionicons name="card" size={28} color="#2563eb" />
+                </View>
+                <Text style={styles.businessCardTitle}>Banking</Text>
+                <Text style={styles.businessCardSubtitle}>Deposits & transfers</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* Vendors Card */}
+            <TouchableOpacity
+              style={styles.businessCard}
+              onPress={() => router.push('/vendors' as any)}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#fce7f3', '#fbcfe8']}
+                style={styles.businessGradient}
+              >
+                <View style={styles.businessIconContainer}>
+                  <Ionicons name="business" size={28} color="#ec4899" />
+                </View>
+                <Text style={styles.businessCardTitle}>Vendors</Text>
+                <Text style={styles.businessCardSubtitle}>Supplier management</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* Reports Card */}
+            <TouchableOpacity
+              style={styles.businessCard}
+              onPress={() => router.push('/reports' as any)}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#e0e7ff', '#c7d2fe']}
+                style={styles.businessGradient}
+              >
+                <View style={styles.businessIconContainer}>
+                  <Ionicons name="stats-chart" size={28} color="#6366f1" />
+                </View>
+                <Text style={styles.businessCardTitle}>Financial Reports</Text>
+                <Text style={styles.businessCardSubtitle}>Analytics & insights</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* Fixed Assets Card */}
+            <TouchableOpacity
+              style={styles.businessCard}
+              onPress={() => router.push('/fixed-assets' as any)}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#fed7aa', '#fdba74']}
+                style={styles.businessGradient}
+              >
+                <View style={styles.businessIconContainer}>
+                  <Ionicons name="briefcase" size={28} color="#ea580c" />
+                </View>
+                <Text style={styles.businessCardTitle}>Fixed Assets</Text>
+                <Text style={styles.businessCardSubtitle}>Asset tracking</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         </View>
@@ -505,67 +556,7 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Budget Overview Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Budget Overview</Text>
-            <TouchableOpacity onPress={() => {
-              try {
-                (router.push as any)('/monthly-budgets');
-              } catch (error) {
-                console.error('Navigation error:', error);
-              }
-            }}>
-              <Text style={styles.seeAllText}>See All</Text>
-            </TouchableOpacity>
-          </View>
 
-          {dashboardData.budgetOverview.map((budget: any, index: number) => {
-            const progress = calculateProgress(budget.spent, budget.allocated);
-            const isOverBudget = budget.spent > budget.allocated;
-            const remaining = budget.allocated - budget.spent;
-
-            return (
-              <TouchableOpacity
-                key={index}
-                style={styles.budgetCard}
-                onPress={() => {
-                  try {
-                    (router.push as any)('/monthly-budgets');
-                  } catch (error) {
-                    console.error('Navigation error:', error);
-                  }
-                }}
-                activeOpacity={0.7}
-              >
-                <View style={styles.budgetHeader}>
-                  <Text style={styles.budgetCategory}>{budget.category}</Text>
-                  <Text style={[
-                    styles.budgetRemaining,
-                    { color: isOverBudget ? '#ef4444' : '#10b981' }
-                  ]}>
-                    {remaining >= 0 ? 'Remaining: ' : 'Over: '}{formatCurrency(Math.abs(remaining))}
-                  </Text>
-                </View>
-                <View style={styles.budgetAmounts}>
-                  <Text style={styles.budgetAmount}>
-                    {formatCurrency(budget.spent)} / {formatCurrency(budget.allocated)}
-                  </Text>
-                  <Text style={styles.budgetPercentage}>{progress.toFixed(0)}%</Text>
-                </View>
-                <View style={styles.progressBarContainer}>
-                  <View style={[
-                    styles.progressBar,
-                    {
-                      width: `${Math.min(progress, 100)}%`,
-                      backgroundColor: isOverBudget ? '#ef4444' : '#f59e0b'
-                    }
-                  ]} />
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
 
         {/* Additional Quick Actions */}
         <View style={styles.actionsSection}>
@@ -1043,5 +1034,52 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+  },
+  // Business Management Cards
+  businessGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    gap: 12,
+  },
+  businessCard: {
+    width: (width - 56) / 2,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  businessGradient: {
+    padding: 20,
+    minHeight: 140,
+    justifyContent: 'space-between',
+  },
+  businessIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  businessCardTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginTop: 12,
+  },
+  businessCardSubtitle: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 4,
   },
 });

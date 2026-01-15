@@ -1,13 +1,14 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+dotenv.config({ override: true });
 import app from './app.js';
 import { prisma } from './lib/prisma.js';
 
-const PORT = process.env.PORT || 4001;
+const PORT = process.env.PORT || 4400;
 
 // Graceful shutdown handler
 const gracefulShutdown = async () => {
   console.log('Received shutdown signal. Closing server gracefully...');
-  
+
   try {
     await prisma.$disconnect();
     console.log('Database connection closed.');

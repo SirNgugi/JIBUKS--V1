@@ -104,6 +104,9 @@ export interface Account {
   parentAccountId?: string | null;
   balance?: number;
   isDefault?: boolean;
+  isSystem?: boolean;
+  isActive?: boolean;
+  description?: string;
 }
 
 export interface Transaction {
@@ -404,32 +407,206 @@ class ApiService {
     return this.request('/family/goals');
   }
 
-  async saveBudgets(budgets: { category: string; amount: string }[]): Promise<any> {
-    return this.request('/family/budgets', {
+  async getGoal(goalId: number): Promise<any> {
+    return this.request(`/goals/${goalId}`);
+  }
+
+  async contributeToGoal(goalId: number, amount: number, description?: string): Promise<any> {
+    return this.request(`/goals/${goalId}/contribute`, {
       method: 'POST',
-      body: JSON.stringify({ budgets }),
+      body: JSON.stringify({ amount, description }),
     });
   }
 
-  async getBudgets(): Promise<any> {
-    return this.request('/family/budgets');
+  async getAnalytics(period: 'week' | 'month' | 'year' = 'month'): Promise<any> {
+    return this.request(`/dashboard/analytics?period=${period}`);
   }
 
-  async createBudget(budget: { category: string; amount: number; period?: string }): Promise<any> {
-    try {
-      return await this.request('/family/budgets', {
-        method: 'POST',
-        body: JSON.stringify(budget),
-      });
-    } catch (error) {
-      console.warn('createBudget falling back to mock data');
-      return {
-        id: this.generateId('budget'),
-        ...budget,
-        spent: 0,
-      };
-    }
+  // ============================================
+  // PROFESSIONAL ACCOUNTING METHODS
+  // ============================================
+
+  // Vendors
+  async getVendors(params?: { active?: boolean }): Promise<any[]> {
+    const query = params?.active !== undefined ? `?active=${params.active}` : '';
+    return this.request(`/vendors${query}`);
   }
+
+  async getVendor(id: number): Promise<any> {
+    return this.request(`/vendors/${id}`);
+  }
+
+  async createVendor(data: any): Promise<any> {
+    return this.request('/vendors', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Purchases
+  async getPurchases(params?: { status?: string; vendorId?: number }): Promise<any[]> {
+    const query = new URLSearchParams();
+    if (params?.status) query.append('status', params.status);
+    if (params?.vendorId) query.append('vendorId', String(params.vendorId));
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return this.request(`/purchases${suffix}`);
+  }
+
+  async getPurchase(id: number): Promise<any> {
+    return this.request(`/purchases/${id}`);
+  }
+
+  async createPurchase(data: any): Promise<any> {
+    return this.request('/purchases', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async recordPurchasePayment(purchaseId: number, data: any): Promise<any> {
+    return this.request(`/purchases/${purchaseId}/payment`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Inventory
+  async getInventory(params?: { active?: boolean; lowStock?: boolean }): Promise<any[]> {
+    const query = new URLSearchParams();
+    if (params?.active !== undefined) query.append('active', String(params.active));
+    if (params?.lowStock !== undefined) query.append('lowStock', String(params.lowStock));
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return this.request(`/inventory${suffix}`);
+  }
+
+  async getInventoryItem(id: number): Promise<any> {
+    return this.request(`/inventory/${id}`);
+  }
+
+  async createInventoryItem(data: any): Promise<any> {
+    return this.request('/inventory', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getInventoryValuation(): Promise<any> {
+    return this.request('/inventory/valuation/current');
+  }
+
+  async createStockAdjustment(data: any): Promise<any> {
+    return this.request('/inventory/adjustment', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Bank Transactions
+  async getBankTransactions(params?: any): Promise<any[]> {
+    const query = new URLSearchParams();
+    if (params?.bankAccountId) query.append('bankAccountId', String(params.bankAccountId));
+    if (params?.type) query.append('type', params.type);
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return this.request(`/bank/transactions${suffix}`);
+  }
+
+  async createDeposit(data: any): Promise<any> {
+    return this.request('/bank/deposit', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async writeCheque(data: any): Promise<any> {
+    return this.request('/bank/cheque', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async createBankTransfer(data: any): Promise<any> {
+    return this.request('/bank/transfer', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Accounts (Chart of Accounts)
+  async getAccounts(params?: { type?: string }): Promise<any[]> {
+    const query = params?.type ? `?type=${params.type}` : '';
+    return this.request(`/accounts${query}`);
+  }
+
+  // Customers
+  async getCustomers(params?: { active?: boolean }): Promise<any[]> {
+    const query = params?.active !== undefined ? `?active=${params.active}` : '';
+    return this.request(`/customers${query}`);
+  }
+
+  async getCustomer(id: number): Promise<any> {
+    return this.request(`/customers/${id}`);
+  }
+
+  async createCustomer(data: any): Promise<any> {
+    return this.request('/customers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateCustomer(id: number, data: any): Promise<any> {
+    return this.request(`/customers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getCustomerStatement(id: number, params?: { startDate?: string; endDate?: string }): Promise<any> {
+    const query = new URLSearchParams();
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return this.request(`/customers/${id}/statement${suffix}`);
+  }
+
+  // Invoices
+  async getInvoices(params?: { status?: string; customerId?: number }): Promise<any[]> {
+    const query = new URLSearchParams();
+    if (params?.status) query.append('status', params.status);
+    if (params?.customerId) query.append('customerId', String(params.customerId));
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return this.request(`/invoices${suffix}`);
+  }
+
+  async getInvoice(id: number): Promise<any> {
+    return this.request(`/invoices/${id}`);
+  }
+
+  async createInvoice(data: any): Promise<any> {
+    return this.request('/invoices', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateInvoice(id: number, data: any): Promise<any> {
+    return this.request(`/invoices/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async recordInvoicePayment(invoiceId: number, data: any): Promise<any> {
+    return this.request(`/invoices/${invoiceId}/payment`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getUnpaidInvoices(): Promise<any[]> {
+    return this.request('/invoices/status/unpaid');
+  }
+
 
   async getCategories(): Promise<Category[]> {
     try {
@@ -613,14 +790,123 @@ class ApiService {
     });
   }
 
-  async listAccounts(): Promise<Account[]> {
+  // ============================================
+  // CHART OF ACCOUNTS ENDPOINTS
+  // ============================================
+
+  async listAccounts(params: { type?: string; includeBalances?: boolean } = {}): Promise<Account[]> {
+    const query = new URLSearchParams();
+    if (params.type) query.append('type', params.type);
+    if (params.includeBalances !== undefined) {
+      query.append('includeBalances', String(params.includeBalances));
+    }
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+
     try {
-      return await this.request<Account[]>('/accounts');
+      return await this.request<Account[]>(`/accounts${suffix}`);
     } catch (error) {
       // Backend not ready - return mock accounts
       console.warn('⚠️ Accounts API not available, returning mock accounts');
       return this.mockAccounts;
     }
+  }
+
+  async getAccount(accountId: string): Promise<Account> {
+    return this.request<Account>(`/accounts/${accountId}`);
+  }
+
+  async createAccount(account: { code: string; name: string; type: string; description?: string }): Promise<Account> {
+    return this.request<Account>('/accounts', {
+      method: 'POST',
+      body: JSON.stringify(account),
+    });
+  }
+
+  async updateAccount(accountId: string, data: Partial<Account>): Promise<Account> {
+    return this.request<Account>(`/accounts/${accountId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteAccount(accountId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/accounts/${accountId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getAccountMapping(category?: string, type?: string): Promise<any> {
+    const query = new URLSearchParams();
+    if (category) query.append('category', category);
+    if (type) query.append('type', type);
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+
+    return this.request<any>(`/accounts/mapping${suffix}`);
+  }
+
+  async seedAccounts(): Promise<{ message: string; accountsCreated: number }> {
+    return this.request('/accounts/seed', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+  }
+
+  async getAccountBalancesSummary(): Promise<any> {
+    return this.request<any>('/accounts/balances/summary');
+  }
+
+  // ============================================
+  // FINANCIAL REPORTS ENDPOINTS
+  // ============================================
+
+  async getTrialBalance(asOfDate?: string): Promise<any> {
+    const query = asOfDate ? `?asOfDate=${asOfDate}` : '';
+    return this.request<any>(`/reports/trial-balance${query}`);
+  }
+
+  async getProfitLoss(startDate?: string, endDate?: string): Promise<any> {
+    const query = new URLSearchParams();
+    if (startDate) query.append('startDate', startDate);
+    if (endDate) query.append('endDate', endDate);
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+
+    return this.request<any>(`/reports/profit-loss${suffix}`);
+  }
+
+  async getCashFlow(startDate?: string, endDate?: string): Promise<any> {
+    const query = new URLSearchParams();
+    if (startDate) query.append('startDate', startDate);
+    if (endDate) query.append('endDate', endDate);
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+
+    return this.request<any>(`/reports/cash-flow${suffix}`);
+  }
+
+  async getBalanceSheet(asOfDate?: string): Promise<any> {
+    const query = asOfDate ? `?asOfDate=${asOfDate}` : '';
+    return this.request<any>(`/reports/balance-sheet${query}`);
+  }
+
+  async getFinancialSummary(startDate?: string, endDate?: string): Promise<any> {
+    const query = new URLSearchParams();
+    if (startDate) query.append('startDate', startDate);
+    if (endDate) query.append('endDate', endDate);
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+
+    return this.request<any>(`/reports/summary${suffix}`);
+  }
+
+  async getMonthlyTrend(months: number = 6): Promise<any> {
+    return this.request<any>(`/reports/monthly-trend?months=${months}`);
+  }
+
+  async getCategoryAnalysis(startDate?: string, endDate?: string): Promise<any> {
+    const query = new URLSearchParams();
+    if (startDate) query.append('startDate', startDate);
+    if (endDate) query.append('endDate', endDate);
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+
+    return this.request<any>(`/reports/category-analysis${suffix}`);
   }
 
   getImageUrl(path: string | null | undefined): string | undefined {

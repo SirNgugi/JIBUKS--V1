@@ -12,7 +12,17 @@ import categoryRoutes from './routes/categories.js';
 import paymentMethodRoutes from './routes/paymentMethods.js';
 import dashboardRoutes from './routes/dashboard.js';
 import goalsRoutes from './routes/goals.js';
-import budgetsRoutes from './routes/budgets.js';
+import accountsRoutes from './routes/accounts.js';
+import reportsRoutes from './routes/reports.js';
+
+// Professional Accounting Routes
+import vendorsRoutes from './routes/vendors.js';
+import purchasesRoutes from './routes/purchases.js';
+import inventoryRoutes from './routes/inventory.js';
+import bankRoutes from './routes/bank.js';
+import fixedAssetsRoutes from './routes/fixed-assets.js';
+import customersRoutes from './routes/customers.js';
+import invoicesRoutes from './routes/invoices.js';
 
 const app = express();
 
@@ -93,7 +103,17 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/payment-methods', paymentMethodRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/goals', goalsRoutes);
-app.use('/api/budgets', budgetsRoutes);
+app.use('/api/accounts', accountsRoutes);
+app.use('/api/reports', reportsRoutes);
+
+// Professional Accounting Routes
+app.use('/api/vendors', vendorsRoutes);
+app.use('/api/purchases', purchasesRoutes);
+app.use('/api/inventory', inventoryRoutes);
+app.use('/api/bank', bankRoutes);
+app.use('/api/fixed-assets', fixedAssetsRoutes);
+app.use('/api/customers', customersRoutes);
+app.use('/api/invoices', invoicesRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

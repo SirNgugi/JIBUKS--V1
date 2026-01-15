@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { generateToken, generateRefreshToken, JWT_SECRET } from '../middleware/auth.js';
 import { prisma } from '../lib/prisma.js';
 import { sendEmail } from '../services/emailService.js';
+import { seedFamilyCoA } from '../services/accountingService.js';
 import crypto from 'crypto';
 
 const SALT_ROUNDS = 10;
@@ -85,15 +86,25 @@ async function register(req, res, next) {
         return res.status(404).json({ error: 'Tenant not found. Please check the tenant slug and try again.' });
       }
     } else {
-      // Create a new tenant for this user
+      // Create a new tenant for this user (FAMILY type)
       tenant = await prisma.tenant.create({
         data: {
           name: `${firstName} ${lastName}`,
           slug: email.split('@')[0],
           ownerEmail: email,
+          tenantType: 'FAMILY',
         },
       });
       role = 'OWNER';
+
+      // Seed Chart of Accounts for the new family
+      try {
+        await seedFamilyCoA(tenant.id);
+        console.log(`[Auth] Seeded CoA for new family tenant ${tenant.id}`);
+      } catch (coaError) {
+        console.error('[Auth] Failed to seed CoA:', coaError);
+        // Don't fail registration if CoA seeding fails
+      }
     }
 
     // Create user record
