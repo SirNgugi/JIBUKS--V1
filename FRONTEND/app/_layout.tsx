@@ -5,6 +5,22 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
 import { toastConfig } from '@/constants/ToastConfig';
+import { useFonts } from 'expo-font';
+import { 
+  InriaSerif_400Regular,
+  InriaSerif_400Regular_Italic,
+  InriaSerif_700Bold,
+  InriaSerif_700Bold_Italic
+} from '@expo-google-fonts/inria-serif';
+import {
+  Inter_400Regular,
+  Inter_600SemiBold,
+} from '@expo-google-fonts/inter';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect } from 'react';
+
+// Keep splash screen visible while loading fonts
+SplashScreen.preventAutoHideAsync();
 
 // Ignore specific warnings
 LogBox.ignoreLogs([
@@ -21,6 +37,23 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+
+  const [fontsLoaded] = useFonts({
+    'InriaSerif-Bold': InriaSerif_700Bold,
+    'InriaSerif-Regular': InriaSerif_400Regular,
+    'Inter': Inter_600SemiBold,
+    'Inter-Regular': Inter_400Regular,
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) {
+    return null;
+  }
 
   return (
     <AuthProvider>
