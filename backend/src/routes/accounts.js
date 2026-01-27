@@ -80,21 +80,11 @@ router.get('/', async (req, res) => {
                     const balance = await getAccountBalance(account.id);
                     return {
                         ...account,
-                        balance,
-                        // Convert id to string for frontend compatibility
-                        id: `acct-${account.code}`,
-                        _dbId: account.id,
+                        balance
                     };
                 })
             );
             console.log('✅ Balances calculated');
-        } else {
-            accountsWithBalances = accounts.map(account => ({
-                ...account,
-                id: `acct-${account.code}`,
-                _dbId: account.id,
-                balance: 0,
-            }));
         }
 
         console.log(`📤 Sending ${accountsWithBalances.length} accounts to frontend`);
@@ -102,6 +92,34 @@ router.get('/', async (req, res) => {
     } catch (error) {
         console.error('❌ Error fetching accounts:', error);
         res.status(500).json({ error: 'Failed to fetch accounts', details: error.message });
+    }
+});
+
+// ============================================
+// GET /api/accounts/payment-eligible - Get payment-eligible accounts only
+// ============================================
+router.get('/payment-eligible', async (req, res) => {
+    try {
+        const { tenantId } = req.user;
+
+        if (!tenantId) {
+            return res.status(400).json({ error: 'User is not part of any family' });
+        }
+
+        const accounts = await prisma.account.findMany({
+            where: {
+                tenantId,
+                isPaymentEligible: true,
+                isActive: true
+            },
+            orderBy: { code: 'asc' }
+        });
+
+        console.log(`✅ Found ${accounts.length} payment-eligible accounts`);
+        res.json(accounts);
+    } catch (error) {
+        console.error('❌ Error fetching payment-eligible accounts:', error);
+        res.status(500).json({ error: 'Failed to fetch payment-eligible accounts' });
     }
 });
 
@@ -457,22 +475,22 @@ router.post('/seed', async (req, res) => {
             return res.status(403).json({ error: 'Only owners or admins can seed accounts' });
         }
 
-        const { force = false } = req.body;
+        const { force = false, mode = 'full' } = req.body;
 
         // Check existing accounts
         const existingCount = await prisma.account.count({
             where: { tenantId },
         });
 
-        if (existingCount > 0 && !force) {
+        if (existingCount > 0 && !force && mode !== 'sync') {
             return res.status(400).json({
-                error: 'Accounts already exist. Use force=true to reseed.',
+                error: 'Accounts already exist. Use force=true to reseed or mode="sync" to add missing.',
                 existingCount,
             });
         }
 
-        // If force, delete all existing accounts (careful!)
-        if (force && existingCount > 0) {
+        // If force (and not sync), delete all existing accounts (careful!)
+        if (force && existingCount > 0 && mode !== 'sync') {
             // Check for journal lines first
             const journalLineCount = await prisma.journalLine.count({
                 where: {
@@ -482,7 +500,7 @@ router.post('/seed', async (req, res) => {
 
             if (journalLineCount > 0) {
                 return res.status(400).json({
-                    error: 'Cannot reseed accounts with existing transactions',
+                    error: 'Cannot reseed (wipe) accounts with existing transactions',
                 });
             }
 

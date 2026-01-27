@@ -122,6 +122,8 @@ export interface Transaction {
   creditAccountId?: string;
   accountId?: string;
   notes?: string;
+  payee?: string;
+  splits?: { category: string; amount: number; description?: string }[];
 }
 
 export interface TransactionStats {
@@ -598,10 +600,26 @@ class ApiService {
     return this.request(`/invoices/${id}`);
   }
 
-  async recordPurchasePayment(purchaseId: number, data: any): Promise<any> {
-    return this.request(`/purchases/${purchaseId}/payment`, {
+  async getPaymentEligibleAccounts(): Promise<any[]> {
+    return this.request('/accounts/payment-eligible');
+  }
+
+  async createTransaction(transactionData: {
+    type: TransactionType;
+    amount: number;
+    category: string;
+    description?: string;
+    paymentMethod?: string;
+    date: string;
+    notes?: string;
+    debitAccountId?: number;
+    creditAccountId?: number;
+    payee?: string;
+    splits?: { category: string; amount: number; description?: string }[];
+  }): Promise<Transaction> {
+    return this.request('/transactions', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(transactionData),
     });
   }
 
@@ -638,6 +656,13 @@ class ApiService {
       console.warn('getCategories falling back to mock categories');
       return this.mockCategories;
     }
+  }
+
+  async createCategory(data: { name: string; type: string; icon?: string; color?: string }): Promise<Category> {
+    return this.request('/categories', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 
   async getPaymentMethods(): Promise<PaymentMethod[]> {

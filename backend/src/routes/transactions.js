@@ -213,6 +213,7 @@ router.get('/stats', async (req, res) => {
 // POST /api/transactions - Create transaction
 // This is the main endpoint that integrates with accounting
 // ============================================
+// POST /api/transactions - Create transaction
 router.post('/', async (req, res) => {
     try {
         const { tenantId, id: userId } = req.user;
@@ -234,12 +235,14 @@ router.post('/', async (req, res) => {
             notes,
             debitAccountId,
             creditAccountId,
-            accountId, // Legacy support - used as the asset account
+            accountId, // Legacy support
+            splits,     // NEW: Array of { category, amount, description }
+            payee,      // NEW: Payee name
         } = req.body;
 
         // Validation
-        if (!type || !amount || !category) {
-            return res.status(400).json({ error: 'Type, amount, and category are required' });
+        if (!type || !amount) {
+            return res.status(400).json({ error: 'Type and amount are required' });
         }
 
         if (!['INCOME', 'EXPENSE'].includes(type)) {
@@ -251,44 +254,41 @@ router.post('/', async (req, res) => {
             return res.status(400).json({ error: 'Amount must be a positive number' });
         }
 
-        // Determine debit and credit accounts
+        let journalRef;
         let resolvedDebitAccountId = null;
         let resolvedCreditAccountId = null;
+        let journalDescription = `${type}: ${payee || category}${description ? ' - ' + description : ''}`;
 
-        if (debitAccountId && creditAccountId) {
-            // Frontend provided specific accounts
-            // Resolve from acct-XXXX format
-            const debitCode = debitAccountId.replace('acct-', '');
-            const creditCode = creditAccountId.replace('acct-', '');
-
-            const [debitAccount, creditAccount] = await Promise.all([
-                prisma.account.findFirst({ where: { tenantId, code: debitCode } }),
-                prisma.account.findFirst({ where: { tenantId, code: creditCode } }),
-            ]);
-
-            resolvedDebitAccountId = debitAccount?.id;
-            resolvedCreditAccountId = creditAccount?.id;
-        } else {
-            // Use automatic mapping based on category
-            const mapping = getAccountMapping(category, type);
-
-            // If accountId (legacy) is provided, use it as the asset account
-            let assetAccountCode = null;
-            if (accountId) {
-                assetAccountCode = accountId.replace('acct-', '');
+        // ==========================================
+        // SCENARIO 1: SPLIT TRANSACTION (Advanced)
+        // ==========================================
+        if (splits && Array.isArray(splits) && splits.length > 0) {
+            // Validate total
+            const splitTotal = splits.reduce((sum, s) => sum + parseFloat(s.amount), 0);
+            if (Math.abs(splitTotal - parsedAmount) > 0.05) {
+                return res.status(400).json({
+                    error: `Split amounts (${splitTotal}) do not match total amount (${parsedAmount})`
+                });
             }
 
-            // Override default asset account if specified
-            if (assetAccountCode) {
-                if (type === 'INCOME') {
-                    mapping.debitAccountCode = assetAccountCode;
-                } else {
-                    mapping.creditAccountCode = assetAccountCode;
-                }
+            // Determine Credit Account (Source of Funds)
+            let creditAccountCode = null;
+            if (creditAccountId) {
+                // Ensure ID is string to safely replace prefix if present
+                const accountIdStr = String(creditAccountId);
+                const idToFind = accountIdStr.startsWith('acct-')
+                    ? parseInt(accountIdStr.replace('acct-', ''))
+                    : parseInt(accountIdStr);
+
+                const acct = await prisma.account.findFirst({
+                    where: { tenantId, id: idToFind }
+                });
+                if (acct) creditAccountCode = acct.code;
             }
 
-            // Also check paymentMethod to determine asset account
-            if (paymentMethod && !accountId) {
+            // Fallback to auto-mapping if no credit account provided
+            if (!creditAccountCode) {
+                // Check paymentMethod
                 const paymentMethodToAccount = {
                     'Cash': '1000',
                     'M-Pesa': '1030',
@@ -297,66 +297,143 @@ router.post('/', async (req, res) => {
                     'Bank Card': '1010',
                     'Credit Card': '2000',
                 };
-
-                const assetCode = paymentMethodToAccount[paymentMethod];
-                if (assetCode) {
-                    if (type === 'INCOME') {
-                        mapping.debitAccountCode = assetCode;
-                    } else {
-                        mapping.creditAccountCode = assetCode;
-                    }
-                }
+                creditAccountCode = paymentMethodToAccount[paymentMethod] || '1000'; // Default Cash
             }
 
-            const accountIds = await resolveAccountIds(
+            const { creditAccountId: creditId } = await resolveAccountIds(tenantId, '1000', creditAccountCode);
+            resolvedCreditAccountId = creditId; // Use this for the main transaction record
+
+            // Construct Journal Lines
+            const lines = [];
+
+            // 1. Credit Line (Total Payment)
+            lines.push({
+                accountId: creditId,
+                debit: 0,
+                credit: parsedAmount,
+                description: `Payment to ${payee || 'Multiple'}`,
+            });
+
+            // 2. Debit Lines (Splits)
+            for (const split of splits) {
+                const mapping = getAccountMapping(split.category, type);
+                const { debitAccountId: splitDebitId } = await resolveAccountIds(
+                    tenantId,
+                    mapping.debitAccountCode,
+                    '1000' // dummy
+                );
+
+                // If we haven't set a main debit account for the Transaction record, use the first one
+                if (!resolvedDebitAccountId) resolvedDebitAccountId = splitDebitId;
+
+                lines.push({
+                    accountId: splitDebitId,
+                    debit: parseFloat(split.amount),
+                    credit: 0,
+                    description: split.description || split.category,
+                });
+            }
+
+            // Create Complex Journal
+            const journal = await createJournalEntry({
                 tenantId,
-                mapping.debitAccountCode,
-                mapping.creditAccountCode
-            );
-
-            resolvedDebitAccountId = accountIds.debitAccountId;
-            resolvedCreditAccountId = accountIds.creditAccountId;
+                lines,
+                amount: parsedAmount,
+                description: journalDescription,
+                date: date ? new Date(date) : new Date(),
+                createdById: userId,
+            });
+            journalRef = journal;
         }
 
-        // Validate accounts were resolved
-        if (!resolvedDebitAccountId || !resolvedCreditAccountId) {
-            console.error('Failed to resolve accounts:', {
-                debitAccountId,
-                creditAccountId,
-                resolvedDebitAccountId,
-                resolvedCreditAccountId,
+        // ==========================================
+        // SCENARIO 2: SIMPLE TRANSACTION (Legacy)
+        // ==========================================
+        else {
+            const categoryToUse = category || 'Uncategorized';
+
+            if (debitAccountId && creditAccountId) {
+                // Frontend provided specific accounts
+                const debitCode = debitAccountId.replace('acct-', '');
+                const creditCode = creditAccountId.replace('acct-', '');
+
+                const [debitAccount, creditAccount] = await Promise.all([
+                    prisma.account.findFirst({ where: { tenantId, code: debitCode } }),
+                    prisma.account.findFirst({ where: { tenantId, code: creditCode } }),
+                ]);
+
+                resolvedDebitAccountId = debitAccount?.id;
+                resolvedCreditAccountId = creditAccount?.id;
+            } else {
+                // Use automatic mapping
+                const mapping = getAccountMapping(categoryToUse, type);
+
+                // Logic for legacy behavior...
+                let assetAccountCode = null;
+                if (accountId) assetAccountCode = accountId.replace('acct-', '');
+
+                if (assetAccountCode) {
+                    if (type === 'INCOME') mapping.debitAccountCode = assetAccountCode;
+                    else mapping.creditAccountCode = assetAccountCode;
+                }
+
+                if (paymentMethod && !accountId) {
+                    const paymentMethodToAccount = {
+                        'Cash': '1000',
+                        'M-Pesa': '1030',
+                        'Mpesa': '1030',
+                        'Bank Transfer': '1010',
+                        'Bank Card': '1010',
+                        'Credit Card': '2000',
+                    };
+                    const assetCode = paymentMethodToAccount[paymentMethod];
+                    if (assetCode) {
+                        if (type === 'INCOME') mapping.debitAccountCode = assetCode;
+                        else mapping.creditAccountCode = assetCode;
+                    }
+                }
+
+                const accountIds = await resolveAccountIds(
+                    tenantId,
+                    mapping.debitAccountCode,
+                    mapping.creditAccountCode
+                );
+
+                resolvedDebitAccountId = accountIds.debitAccountId;
+                resolvedCreditAccountId = accountIds.creditAccountId;
+            }
+
+            if (!resolvedDebitAccountId || !resolvedCreditAccountId) {
+                return res.status(400).json({
+                    error: 'Unable to determine accounting accounts. Please select accounts manually.',
+                });
+            }
+
+            const journal = await createJournalEntry({
+                tenantId,
+                debitAccountId: resolvedDebitAccountId,
+                creditAccountId: resolvedCreditAccountId,
+                amount: parsedAmount,
+                description: journalDescription,
+                date: date ? new Date(date) : new Date(),
+                createdById: userId,
             });
-            return res.status(400).json({
-                error: 'Unable to determine accounting accounts. Please select accounts manually.',
-            });
+            journalRef = journal;
         }
 
-        // Create journal entry (double-entry posting)
-        const journalDescription = `${type}: ${category}${description ? ' - ' + description : ''}`;
-
-        const journal = await createJournalEntry({
-            tenantId,
-            debitAccountId: resolvedDebitAccountId,
-            creditAccountId: resolvedCreditAccountId,
-            amount: parsedAmount,
-            description: journalDescription,
-            date: date ? new Date(date) : new Date(),
-            createdById: userId,
-        });
-
-        // Create transaction record (user-facing record)
+        // Create transaction record
         const transaction = await prisma.transaction.create({
             data: {
                 tenantId,
                 userId,
                 type,
                 amount: parsedAmount,
-                category,
-                description,
+                category: category || (splits ? 'Multiple' : 'Uncategorized'),
+                description: description || (payee ? `Payment to ${payee}` : description),
                 date: date ? new Date(date) : new Date(),
                 paymentMethod,
                 notes,
-                journalId: journal.id,
+                journalId: journalRef.id,
                 debitAccountId: resolvedDebitAccountId,
                 creditAccountId: resolvedCreditAccountId,
             },
@@ -372,12 +449,12 @@ router.post('/', async (req, res) => {
             },
         });
 
-        console.log(`[Transactions] Created transaction ${transaction.id} with journal ${journal.id}`);
+        console.log(`[Transactions] Created transaction ${transaction.id} with journal ${journalRef.id}`);
 
         res.status(201).json({
             ...transaction,
             amount: Number(transaction.amount),
-            journalReference: journal.reference,
+            journalReference: journalRef.reference,
             debitAccountId: `acct-${resolvedDebitAccountId}`,
             creditAccountId: `acct-${resolvedCreditAccountId}`,
         });

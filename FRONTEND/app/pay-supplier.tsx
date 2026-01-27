@@ -42,7 +42,7 @@ export default function PaySupplierScreen() {
         try {
             const [purchasesData, accountsData] = await Promise.all([
                 apiService.getPurchases(), // Fetch all, we will filter
-                apiService.getAccounts({ type: 'ASSET' }) // Fetch Asset accounts (Cash/Bank)
+                apiService.getPaymentEligibleAccounts() // Fetch only payment-eligible accounts (Cash/Bank)
             ]);
 
             // Filter for this supplier and unpaid/partial
@@ -58,11 +58,7 @@ export default function PaySupplierScreen() {
                 .sort((a: any, b: any) => new Date(a.dueDate || a.createdAt).getTime() - new Date(b.dueDate || b.createdAt).getTime());
 
             setBills(unpaidBills);
-
-            // Filter only Cash/Bank items from Assets (simple heuristic or just show all assets)
-            // Usually look for accounts with code starting with 1 or filtered by functionality
-            // For now, show all ASSET accounts.
-            setPaymentAccounts(accountsData);
+            setPaymentAccounts(accountsData); // Already filtered to payment-eligible only
 
             setPageLoading(false);
         } catch (error) {

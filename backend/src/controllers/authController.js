@@ -6,30 +6,40 @@ import { sendEmail } from '../services/emailService.js';
 import { seedFamilyCoA, seedFamilyCategories, seedFamilyPaymentMethods } from '../services/accountingService.js';
 import crypto from 'crypto';
 
-const SALT_ROUNDS = 10;
+// Use lower salt rounds in development for faster login
+const SALT_ROUNDS = process.env.NODE_ENV === 'production' ? 10 : 6;
 
 /**
  * Local login with email/password (fallback)
  */
 async function login(req, res, next) {
+  const startTime = Date.now();
   try {
     const { email, password } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: 'email and password required' });
     }
 
+    console.log(`[Login] Finding user: ${email}`);
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
+      console.log(`[Login] User not found: ${email}`);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
+    console.log(`[Login] User found, comparing password...`);
 
     const match = await bcrypt.compare(password, user.password || '');
     if (!match) {
+      console.log(`[Login] Password mismatch for: ${email}`);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
+    console.log(`[Login] Password matched, generating tokens...`);
 
     const accessToken = generateToken(user);
     const refreshToken = generateRefreshToken(user);
+
+    const duration = Date.now() - startTime;
+    console.log(`[Login] ✅ Success for ${email} (${duration}ms)`);
 
     res.json({
       accessToken,
@@ -43,6 +53,8 @@ async function login(req, res, next) {
       },
     });
   } catch (err) {
+    const duration = Date.now() - startTime;
+    console.error(`[Login] ❌ Error after ${duration}ms:`, err);
     next(err);
   }
 }

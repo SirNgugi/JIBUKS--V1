@@ -561,6 +561,38 @@ router.post('/:id/payment', async (req, res) => {
             return res.status(400).json({ error: 'Bank account is required' });
         }
 
+        // Validate payment account (BULLETPROOF)
+        const paymentAccount = await prisma.account.findFirst({
+            where: { id: parseInt(bankAccountId), tenantId }
+        });
+
+        if (!paymentAccount) {
+            return res.status(400).json({
+                error: 'INVALID_PAYMENT_ACCOUNT',
+                message: 'Payment account not found or does not belong to your company.'
+            });
+        }
+
+        if (!paymentAccount.isPaymentEligible) {
+            return res.status(400).json({
+                error: 'INVALID_PAYMENT_ACCOUNT',
+                message: 'Selected account is not a valid payment account.',
+                hints: [
+                    'Choose a Cash or Bank account.',
+                    'Ensure the account is Active.',
+                    'If you need a new bank, create it under Banks & Cash.'
+                ],
+                allowedAccountSubtypes: ['bank', 'cash']
+            });
+        }
+
+        if (!paymentAccount.isActive) {
+            return res.status(400).json({
+                error: 'INVALID_PAYMENT_ACCOUNT',
+                message: 'Selected payment account is not active.'
+            });
+        }
+
         const purchase = await prisma.purchase.findFirst({
             where: { id: parseInt(id), tenantId },
             include: { vendor: true }

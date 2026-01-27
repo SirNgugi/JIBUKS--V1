@@ -6,6 +6,7 @@ import apiService, { User, LoginCredentials, RegisterData, ApiError } from '../s
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
+  isInitializing: boolean;
   isAuthenticated: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
@@ -25,7 +26,8 @@ interface AuthProviderProps {
 // Provider component
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Load stored auth on app start
@@ -36,7 +38,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const loadStoredAuth = async () => {
     try {
       const token = await AsyncStorage.getItem('authToken');
-      
+
       if (token) {
         // Verify token is still valid by fetching user
         const userData = await apiService.getCurrentUser();
@@ -48,7 +50,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await AsyncStorage.removeItem('refreshToken');
       setUser(null);
     } finally {
-      setIsLoading(false);
+      setIsInitializing(false);
     }
   };
 
@@ -56,7 +58,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const response = await apiService.login(credentials);
       setUser(response.user);
     } catch (error) {
@@ -72,7 +74,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const response = await apiService.register(data);
       setUser(response.user);
     } catch (error) {
@@ -103,6 +105,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value: AuthContextType = {
     user,
     isLoading,
+    isInitializing,
     isAuthenticated: !!user,
     login,
     register,
@@ -117,11 +120,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 // Custom hook to use auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  
+
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
-  
+
   return context;
 };
 

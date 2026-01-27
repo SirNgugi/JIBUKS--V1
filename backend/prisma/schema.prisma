@@ -43,6 +43,7 @@ model Tenant {
   expenses              Expense[]
   expenseCategories     ExpenseCategory[]
   vendorTags            VendorTag[]
+  paymentAccounts       PaymentAccount[]
 
   @@map("tenants")
 }
@@ -67,6 +68,14 @@ model Account {
   code            String        // Account code (e.g., '1000', '4010')
   name            String        // Display name (e.g., 'Cash on Hand')
   type            AccountType   // ASSET, LIABILITY, EQUITY, INCOME, EXPENSE
+  
+  // NEW: Bulletproof Chart of Accounts fields
+  subtype         String?       // "cash", "bank", "ar", "ap", "tax", "fixed_asset", "cogs", "operating_expense"
+  systemTag       String?       @map("system_tag") // "CASH", "BANK", "AP", "AR" - for reliable lookups without hardcoding IDs
+  isControl       Boolean       @default(false) @map("is_control") // Control accounts (AR/AP) - subledger required
+  allowDirectPost Boolean       @default(true) @map("allow_direct_post") // False for control accounts
+  isPaymentEligible Boolean     @default(false) @map("is_payment_eligible") // True for Cash/Bank only
+  
   description     String?
   parentId        Int?          @map("parent_id")
   isSystem        Boolean       @default(false) @map("is_system") // System accounts can't be deleted
@@ -85,11 +94,38 @@ model Account {
   invoicePayments InvoicePayment[]
   expenses        Expense[]
   expenseCategories ExpenseCategory[]
+  paymentAccounts PaymentAccount[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
   @@index([type])
+  @@index([systemTag])
   @@map("accounts")
+}
+
+
+// Payment Accounts Registry
+// Operational metadata for Cash/Bank accounts used in payments
+model PaymentAccount {
+  id                Int      @id @default(autoincrement())
+  tenantId          Int      @map("tenant_id")
+  accountId         Int      @map("account_id")
+  name              String   // User-friendly name: "Petty Cash", "KCB Main Account"
+  institution       String?  // "KCB Bank", "Equity Bank", "M-Pesa"
+  accountNumber     String?  @map("account_number")
+  openingBalance    Decimal  @default(0) @map("opening_balance")
+  reconcileEnabled  Boolean  @default(true) @map("reconcile_enabled")
+  status            String   @default("active") // "active" | "archived"
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  account           Account  @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  
+  @@unique([tenantId, accountId])
+  @@index([tenantId])
+  @@index([status])
+  @@map("payment_accounts")
 }
 
 

@@ -28,71 +28,71 @@ import { prisma } from '../lib/prisma.js';
 export const FAMILY_COA_TEMPLATE = [
     // ASSETS (1000-1999)
     // Cash & Bank Accounts (1000-1099)
-    { code: '1000', name: 'Cash on Hand', type: 'ASSET', description: 'Physical cash', isSystem: true, isContra: false },
-    { code: '1010', name: 'Checking Account', type: 'ASSET', description: 'Bank checking account', isSystem: true, isContra: false },
-    { code: '1020', name: 'Savings Account', type: 'ASSET', description: 'Bank savings account', isSystem: true, isContra: false },
-    { code: '1030', name: 'M-Pesa Wallet', type: 'ASSET', description: 'Mobile money wallet', isSystem: true, isContra: false },
-    { code: '1040', name: 'Airtel Money', type: 'ASSET', description: 'Airtel Money wallet', isSystem: false, isContra: false },
-    { code: '1050', name: 'PayPal', type: 'ASSET', description: 'PayPal account', isSystem: false, isContra: false },
-    { code: '1060', name: 'Undeposited Funds', type: 'ASSET', description: 'Cash received not yet deposited', isSystem: true, isContra: false },
-    { code: '1070', name: 'Clearing Account', type: 'ASSET', description: 'Temporary clearing account', isSystem: true, isContra: false },
+    { code: '1000', name: 'Cash on Hand', type: 'ASSET', description: 'Physical cash', isSystem: true, isContra: false, isPaymentEligible: true, subtype: 'cash' },
+    { code: '1010', name: 'Checking Account', type: 'ASSET', description: 'Bank checking account', isSystem: true, isContra: false, isPaymentEligible: true, subtype: 'bank' },
+    { code: '1020', name: 'Savings Account', type: 'ASSET', description: 'Bank savings account', isSystem: true, isContra: false, isPaymentEligible: true, subtype: 'bank' },
+    { code: '1030', name: 'M-Pesa Wallet', type: 'ASSET', description: 'Mobile money wallet', isSystem: true, isContra: false, isPaymentEligible: true, subtype: 'cash' },
+    { code: '1040', name: 'Airtel Money', type: 'ASSET', description: 'Airtel Money wallet', isSystem: false, isContra: false, isPaymentEligible: true, subtype: 'cash' },
+    { code: '1050', name: 'PayPal', type: 'ASSET', description: 'PayPal account', isSystem: false, isContra: false, isPaymentEligible: true, subtype: 'bank' },
+    { code: '1060', name: 'Undeposited Funds', type: 'ASSET', description: 'Cash received not yet deposited', isSystem: true, isContra: false, subtype: 'cash' },
+    { code: '1070', name: 'Clearing Account', type: 'ASSET', description: 'Temporary clearing account', isSystem: true, isContra: false, subtype: 'other_asset' },
 
     // Receivables (1100-1199)
-    { code: '1100', name: 'Accounts Receivable', type: 'ASSET', description: 'Money owed by customers', isSystem: true, isContra: false },
-    { code: '1110', name: 'Notes Receivable', type: 'ASSET', description: 'Promissory notes from customers', isSystem: false, isContra: false },
+    { code: '1100', name: 'Accounts Receivable', type: 'ASSET', description: 'Money owed by customers', isSystem: true, isContra: false, subtype: 'ar' },
+    { code: '1110', name: 'Notes Receivable', type: 'ASSET', description: 'Promissory notes from customers', isSystem: false, isContra: false, subtype: 'other_asset' },
 
     // Prepayments (1200-1299)
-    { code: '1200', name: 'Prepaid Expenses', type: 'ASSET', description: 'Advance payments', isSystem: false, isContra: false },
+    { code: '1200', name: 'Prepaid Expenses', type: 'ASSET', description: 'Advance payments', isSystem: false, isContra: false, subtype: 'other_asset' },
     { code: '1210', name: 'Prepaid Rent', type: 'ASSET', description: 'Rent paid in advance', isSystem: false, isContra: false },
     { code: '1220', name: 'Prepaid Insurance', type: 'ASSET', description: 'Insurance paid in advance', isSystem: false, isContra: false },
 
     // Inventory (1300-1399)
-    { code: '1300', name: 'Inventory - Finished Goods', type: 'ASSET', description: 'Finished products ready for sale', isSystem: true, isContra: false },
+    { code: '1300', name: 'Inventory - Finished Goods', type: 'ASSET', description: 'Finished products ready for sale', isSystem: true, isContra: false, subtype: 'inventory' },
     { code: '1310', name: 'Inventory - Raw Materials', type: 'ASSET', description: 'Raw materials for production', isSystem: false, isContra: false },
     { code: '1320', name: 'Inventory - Work in Progress', type: 'ASSET', description: 'Goods in production', isSystem: false, isContra: false },
 
     // VAT (1400-1499)
-    { code: '1400', name: 'VAT Receivable (Input VAT)', type: 'ASSET', description: 'VAT paid on purchases (16%)', isSystem: true, isContra: false },
+    { code: '1400', name: 'VAT Receivable (Input VAT)', type: 'ASSET', description: 'VAT paid on purchases (16%)', isSystem: true, isContra: false, subtype: 'tax' },
 
     // Fixed Assets (1500-1599)
-    { code: '1500', name: 'Equipment', type: 'ASSET', description: 'Business equipment', isSystem: true, isContra: false },
-    { code: '1510', name: 'Furniture & Fixtures', type: 'ASSET', description: 'Office furniture', isSystem: false, isContra: false },
-    { code: '1520', name: 'Vehicles', type: 'ASSET', description: 'Company vehicles', isSystem: false, isContra: false },
-    { code: '1530', name: 'Buildings', type: 'ASSET', description: 'Real estate property', isSystem: false, isContra: false },
-    { code: '1590', name: 'Accumulated Depreciation', type: 'ASSET', description: 'Contra-asset for depreciation', isSystem: true, isContra: true },
+    { code: '1500', name: 'Equipment', type: 'ASSET', description: 'Business equipment', isSystem: true, isContra: false, subtype: 'fixed_asset' },
+    { code: '1510', name: 'Furniture & Fixtures', type: 'ASSET', description: 'Office furniture', isSystem: false, isContra: false, subtype: 'fixed_asset' },
+    { code: '1520', name: 'Vehicles', type: 'ASSET', description: 'Company vehicles', isSystem: false, isContra: false, subtype: 'fixed_asset' },
+    { code: '1530', name: 'Buildings', type: 'ASSET', description: 'Real estate property', isSystem: false, isContra: false, subtype: 'fixed_asset' },
+    { code: '1590', name: 'Accumulated Depreciation', type: 'ASSET', description: 'Contra-asset for depreciation', isSystem: true, isContra: true, subtype: 'fixed_asset' },
 
     // LIABILITIES (2000-2999)
     // Current Liabilities (2000-2099)
-    { code: '2000', name: 'Credit Card', type: 'LIABILITY', description: 'Credit card balances', isSystem: true, isContra: false },
-    { code: '2010', name: 'Loans Payable', type: 'LIABILITY', description: 'Personal/business loans', isSystem: true, isContra: false },
-    { code: '2020', name: 'Accounts Payable', type: 'LIABILITY', description: 'Money owed to suppliers', isSystem: true, isContra: false },
-    { code: '2030', name: 'Mortgage', type: 'LIABILITY', description: 'Home/property loan', isSystem: false, isContra: false },
+    { code: '2000', name: 'Credit Card', type: 'LIABILITY', description: 'Credit card balances', isSystem: true, isContra: false, isPaymentEligible: true, subtype: 'credit_card' },
+    { code: '2010', name: 'Loans Payable', type: 'LIABILITY', description: 'Personal/business loans', isSystem: true, isContra: false, subtype: 'liabilities' },
+    { code: '2020', name: 'Accounts Payable', type: 'LIABILITY', description: 'Money owed to suppliers', isSystem: true, isContra: false, subtype: 'ap' },
+    { code: '2030', name: 'Mortgage', type: 'LIABILITY', description: 'Home/property loan', isSystem: false, isContra: false, subtype: 'liabilities' },
 
     // VAT (2500-2599)
-    { code: '2500', name: 'VAT Payable (Output VAT)', type: 'LIABILITY', description: 'VAT collected on sales (16%)', isSystem: true, isContra: false },
+    { code: '2500', name: 'VAT Payable (Output VAT)', type: 'LIABILITY', description: 'VAT collected on sales (16%)', isSystem: true, isContra: false, subtype: 'tax' },
 
     // Customer Deposits (2600-2699)
     { code: '2600', name: 'Customer Deposits', type: 'LIABILITY', description: 'Advance payments from customers', isSystem: true, isContra: false },
     { code: '2610', name: 'Unearned Revenue', type: 'LIABILITY', description: 'Revenue received in advance', isSystem: false, isContra: false },
 
     // Payroll Liabilities (2700-2799)
-    { code: '2700', name: 'PAYE Payable', type: 'LIABILITY', description: 'Income tax withheld from employees', isSystem: true, isContra: false },
+    { code: '2700', name: 'PAYE Payable', type: 'LIABILITY', description: 'Income tax withheld from employees', isSystem: true, isContra: false, subtype: 'liabilities' },
     { code: '2710', name: 'NSSF Payable', type: 'LIABILITY', description: 'National Social Security Fund', isSystem: true, isContra: false },
     { code: '2720', name: 'NHIF Payable', type: 'LIABILITY', description: 'National Hospital Insurance Fund', isSystem: true, isContra: false },
 
     // EQUITY (3000-3999)
-    { code: '3000', name: 'Owner Equity', type: 'EQUITY', description: 'Owner capital / Opening balance', isSystem: true, isContra: false },
-    { code: '3010', name: 'Retained Earnings', type: 'EQUITY', description: 'Accumulated profits/savings', isSystem: true, isContra: false },
-    { code: '3020', name: 'Drawings', type: 'EQUITY', description: 'Owner withdrawals', isSystem: false, isContra: true },
+    { code: '3000', name: 'Owner Equity', type: 'EQUITY', description: 'Owner capital / Opening balance', isSystem: true, isContra: false, subtype: 'equity' },
+    { code: '3010', name: 'Retained Earnings', type: 'EQUITY', description: 'Accumulated profits/savings', isSystem: true, isContra: false, subtype: 'equity' },
+    { code: '3020', name: 'Drawings', type: 'EQUITY', description: 'Owner withdrawals', isSystem: false, isContra: true, subtype: 'equity' },
 
     // INCOME (4000-4999)
     // Personal Income (4000-4099)
-    { code: '4000', name: 'Salary Income', type: 'INCOME', description: 'Employment salary', isSystem: true, isContra: false },
-    { code: '4010', name: 'Business Income', type: 'INCOME', description: 'Side business / freelance', isSystem: true, isContra: false },
-    { code: '4020', name: 'Investment Income', type: 'INCOME', description: 'Dividends, interest', isSystem: true, isContra: false },
-    { code: '4030', name: 'Gift Income', type: 'INCOME', description: 'Monetary gifts received', isSystem: true, isContra: false },
-    { code: '4040', name: 'Rental Income', type: 'INCOME', description: 'Property rental income', isSystem: false, isContra: false },
-    { code: '4050', name: 'Other Income', type: 'INCOME', description: 'Miscellaneous income', isSystem: true, isContra: false },
+    { code: '4000', name: 'Salary Income', type: 'INCOME', description: 'Employment salary', isSystem: true, isContra: false, subtype: 'income' },
+    { code: '4010', name: 'Business Income', type: 'INCOME', description: 'Side business / freelance', isSystem: true, isContra: false, subtype: 'income' },
+    { code: '4020', name: 'Investment Income', type: 'INCOME', description: 'Dividends, interest', isSystem: true, isContra: false, subtype: 'income' },
+    { code: '4030', name: 'Gift Income', type: 'INCOME', description: 'Monetary gifts received', isSystem: true, isContra: false, subtype: 'income' },
+    { code: '4040', name: 'Rental Income', type: 'INCOME', description: 'Property rental income', isSystem: false, isContra: false, subtype: 'income' },
+    { code: '4050', name: 'Other Income', type: 'INCOME', description: 'Miscellaneous income', isSystem: true, isContra: false, subtype: 'income' },
 
     // Sales Revenue (4100-4199)
     { code: '4100', name: 'Product Sales', type: 'INCOME', description: 'Revenue from product sales', isSystem: true, isContra: false },
@@ -104,41 +104,68 @@ export const FAMILY_COA_TEMPLATE = [
     { code: '4200', name: 'Interest Income', type: 'INCOME', description: 'Interest earned on deposits', isSystem: false, isContra: false },
     { code: '4210', name: 'Late Fee Income', type: 'INCOME', description: 'Late payment fees from customers', isSystem: false, isContra: false },
 
-    // EXPENSES (5000-5999)
-    // Personal/Household Expenses (5000-5199)
-    { code: '5000', name: 'Food & Groceries', type: 'EXPENSE', description: 'Food and grocery shopping', isSystem: true, isContra: false },
-    { code: '5010', name: 'Transport', type: 'EXPENSE', description: 'Fuel, fares, vehicle expenses', isSystem: true, isContra: false },
-    { code: '5020', name: 'Housing/Rent', type: 'EXPENSE', description: 'Rent and housing costs', isSystem: true, isContra: false },
-    { code: '5030', name: 'Utilities', type: 'EXPENSE', description: 'Electricity, water, internet', isSystem: true, isContra: false },
-    { code: '5040', name: 'Healthcare', type: 'EXPENSE', description: 'Medical expenses, insurance', isSystem: true, isContra: false },
-    { code: '5050', name: 'Education', type: 'EXPENSE', description: 'School fees, books, courses', isSystem: true, isContra: false },
-    { code: '5060', name: 'Entertainment', type: 'EXPENSE', description: 'Movies, dining out, hobbies', isSystem: true, isContra: false },
-    { code: '5070', name: 'Shopping', type: 'EXPENSE', description: 'Clothing, household items', isSystem: true, isContra: false },
-    { code: '5080', name: 'Communication', type: 'EXPENSE', description: 'Phone bills, airtime', isSystem: true, isContra: false },
-    { code: '5090', name: 'Personal Care', type: 'EXPENSE', description: 'Beauty, grooming', isSystem: false, isContra: false },
-    { code: '5100', name: 'Insurance', type: 'EXPENSE', description: 'Insurance premiums', isSystem: false, isContra: false },
-    { code: '5110', name: 'Donations/Tithe', type: 'EXPENSE', description: 'Charitable giving', isSystem: false, isContra: false },
-    { code: '5120', name: 'Childcare', type: 'EXPENSE', description: 'Daycare, babysitting', isSystem: false, isContra: false },
-    { code: '5130', name: 'Pet Care', type: 'EXPENSE', description: 'Pet food, vet bills', isSystem: false, isContra: false },
-    { code: '5140', name: 'Subscriptions', type: 'EXPENSE', description: 'Netflix, magazines, etc.', isSystem: false, isContra: false },
-    { code: '5199', name: 'Other Expenses', type: 'EXPENSE', description: 'Miscellaneous expenses', isSystem: true, isContra: false },
+    // EXPENSES (6000-6999) - NEW 6000 SERIES FAMILY STRUCTURE
 
-    // Cost of Goods Sold (5200-5249)
-    { code: '5200', name: 'Cost of Goods Sold', type: 'EXPENSE', description: 'Direct cost of products sold', isSystem: true, isContra: false },
-    { code: '5210', name: 'Purchase Discounts', type: 'EXPENSE', description: 'Discounts received on purchases (contra-expense)', isSystem: false, isContra: true },
-    { code: '5220', name: 'Freight & Shipping', type: 'EXPENSE', description: 'Freight and delivery costs', isSystem: false, isContra: false },
+    // 6000 - Housing & Utilities
+    { code: '6000', name: 'Housing & Utilities', type: 'EXPENSE', description: 'Parent Category: Housing', isSystem: true, subtype: 'operating_expense' },
+    { code: '6010', name: 'Rent Expense', type: 'EXPENSE', description: 'Monthly rent', parentCode: '6000', subtype: 'operating_expense' },
+    { code: '6020', name: 'Mortgage Interest', type: 'EXPENSE', description: 'Interest portion of mortgage', parentCode: '6000', subtype: 'operating_expense' },
+    { code: '6030', name: 'Property Taxes', type: 'EXPENSE', description: 'Property tax payments', parentCode: '6000', subtype: 'operating_expense' },
+    { code: '6040', name: 'Electricity / Power', type: 'EXPENSE', description: 'Electricity bills', parentCode: '6000', subtype: 'operating_expense' },
+    { code: '6050', name: 'Water & Sewer', type: 'EXPENSE', description: 'Water bills', parentCode: '6000', subtype: 'operating_expense' },
+    { code: '6060', name: 'Internet & Cable', type: 'EXPENSE', description: 'Internet and TV', parentCode: '6000', subtype: 'operating_expense' },
+    { code: '6070', name: 'Home Repairs & Maintenance', type: 'EXPENSE', description: 'Fixes and upkeep', parentCode: '6000', subtype: 'operating_expense' },
+    { code: '6080', name: 'House Cleaning Services', type: 'EXPENSE', description: 'Cleaning help', parentCode: '6000', subtype: 'operating_expense' },
 
-    // Operating Expenses (5250-5299)
-    { code: '5250', name: 'Bank Charges', type: 'EXPENSE', description: 'Bank fees and charges', isSystem: true, isContra: false },
-    { code: '5260', name: 'Interest Expense', type: 'EXPENSE', description: 'Interest on loans and credit', isSystem: true, isContra: false },
+    // 6100 - Food & Living
+    { code: '6100', name: 'Food & Living', type: 'EXPENSE', description: 'Parent Category: Food', isSystem: true, subtype: 'operating_expense' },
+    { code: '6110', name: 'Groceries', type: 'EXPENSE', description: 'Essential food', parentCode: '6100', subtype: 'operating_expense' },
+    { code: '6120', name: 'Dining Out', type: 'EXPENSE', description: 'Restaurants & delivery', parentCode: '6100', subtype: 'operating_expense' },
+    { code: '6130', name: 'Personal Care', type: 'EXPENSE', description: 'Haircuts, hygiene', parentCode: '6100', subtype: 'operating_expense' },
+    { code: '6140', name: 'Clothing & Shoes', type: 'EXPENSE', description: 'Apparel', parentCode: '6100', subtype: 'operating_expense' },
+    { code: '6150', name: 'Laundry & Dry Cleaning', type: 'EXPENSE', description: 'Cleaning clothes', parentCode: '6100', subtype: 'operating_expense' },
 
-    // Depreciation (5300-5399)
-    { code: '5300', name: 'Depreciation Expense', type: 'EXPENSE', description: 'Fixed asset depreciation', isSystem: true, isContra: false },
+    // 6200 - Transportation
+    { code: '6200', name: 'Transportation', type: 'EXPENSE', description: 'Parent Category: Transport', isSystem: true, subtype: 'operating_expense' },
+    { code: '6210', name: 'Fuel / Gas', type: 'EXPENSE', description: 'Fuel for vehicles', parentCode: '6200', subtype: 'operating_expense' },
+    { code: '6220', name: 'Auto Insurance', type: 'EXPENSE', description: 'Car insurance', parentCode: '6200', subtype: 'operating_expense' },
+    { code: '6230', name: 'Car Repairs', type: 'EXPENSE', description: 'Vehicle maintenance', parentCode: '6200', subtype: 'operating_expense' },
+    { code: '6240', name: 'Parking & Tolls', type: 'EXPENSE', description: 'Parking fees', parentCode: '6200', subtype: 'operating_expense' },
+    { code: '6250', name: 'Public Transport / Uber', type: 'EXPENSE', description: 'Bus, taxi, rideshare', parentCode: '6200', subtype: 'operating_expense' },
+    { code: '6260', name: 'Vehicle Registration', type: 'EXPENSE', description: 'Licenses and taxes', parentCode: '6200', subtype: 'operating_expense' },
 
-    // Payroll Expenses (5400-5499)
-    { code: '5400', name: 'Salaries & Wages', type: 'EXPENSE', description: 'Employee salaries', isSystem: true, isContra: false },
-    { code: '5410', name: 'Payroll Tax', type: 'EXPENSE', description: 'Employer payroll taxes', isSystem: false, isContra: false },
-    { code: '5420', name: 'Employee Benefits', type: 'EXPENSE', description: 'Health insurance, retirement', isSystem: false, isContra: false },
+    // 6300 - Health & Wellness
+    { code: '6300', name: 'Health & Wellness', type: 'EXPENSE', description: 'Parent Category: Health', isSystem: true, subtype: 'operating_expense' },
+    { code: '6310', name: 'Health Insurance', type: 'EXPENSE', description: 'Premiums', parentCode: '6300', subtype: 'operating_expense' },
+    { code: '6320', name: 'Doctors & Dental', type: 'EXPENSE', description: 'Visits and checkups', parentCode: '6300', subtype: 'operating_expense' },
+    { code: '6330', name: 'Pharmacy', type: 'EXPENSE', description: 'Medicine and drugs', parentCode: '6300', subtype: 'operating_expense' },
+    { code: '6340', name: 'Gym & Fitness', type: 'EXPENSE', description: 'Memberships and gear', parentCode: '6300', subtype: 'operating_expense' },
+
+    // 6400 - Education & Family
+    { code: '6400', name: 'Education & Family', type: 'EXPENSE', description: 'Parent Category: Family', isSystem: true, subtype: 'operating_expense' },
+    { code: '6410', name: 'School Tuition', type: 'EXPENSE', description: 'Classes and fees', parentCode: '6400', subtype: 'operating_expense' },
+    { code: '6420', name: 'School Supplies', type: 'EXPENSE', description: 'Books and stationery', parentCode: '6400', subtype: 'operating_expense' },
+    { code: '6430', name: 'Childcare / Nanny', type: 'EXPENSE', description: 'Babysitting and help', parentCode: '6400', subtype: 'operating_expense' },
+    { code: '6440', name: 'Activities', type: 'EXPENSE', description: 'Sports, music, hobbies', parentCode: '6400', subtype: 'operating_expense' },
+    { code: '6450', name: 'Pet Care', type: 'EXPENSE', description: 'Vet, food, grooming', parentCode: '6400', subtype: 'operating_expense' },
+
+    // 6500 - Entertainment
+    { code: '6500', name: 'Entertainment', type: 'EXPENSE', description: 'Parent Category: Fun', isSystem: true, subtype: 'operating_expense' },
+    { code: '6510', name: 'Subscriptions', type: 'EXPENSE', description: 'Netflix, Spotify, App services', parentCode: '6500', subtype: 'operating_expense' },
+    { code: '6520', name: 'Movies & Events', type: 'EXPENSE', description: 'Outings and tickets', parentCode: '6500', subtype: 'operating_expense' },
+    { code: '6530', name: 'Hobbies', type: 'EXPENSE', description: 'Personal interests', parentCode: '6500', subtype: 'operating_expense' },
+    { code: '6540', name: 'Travel & Vacation', type: 'EXPENSE', description: 'Trips and holidays', parentCode: '6500', subtype: 'operating_expense' },
+
+    // 6600 - Financial Fees
+    { code: '6600', name: 'Financial Fees', type: 'EXPENSE', description: 'Parent Category: Fees', isSystem: true, subtype: 'operating_expense' },
+    { code: '6610', name: 'Bank Charges', type: 'EXPENSE', description: 'Service fees', parentCode: '6600', subtype: 'operating_expense' },
+    { code: '6620', name: 'Credit Card Interest', type: 'EXPENSE', description: 'Interest paid', parentCode: '6600', subtype: 'operating_expense' },
+    { code: '6630', name: 'Late Fees', type: 'EXPENSE', description: 'Penalties', parentCode: '6600', subtype: 'operating_expense' },
+
+    // Other Standard Business/Mixed
+    { code: '5199', name: 'Uncategorized Expense', type: 'EXPENSE', description: 'To be sorted', isSystem: true, subtype: 'operating_expense' },
+    { code: '5200', name: 'Cost of Goods Sold', type: 'EXPENSE', description: 'Direct business costs', isSystem: false, subtype: 'cogs' },
+    { code: '5400', name: 'Salaries & Wages', type: 'EXPENSE', description: 'Employee salaries', isSystem: false, subtype: 'operating_expense' },
 ];
 
 // ============================================
@@ -163,26 +190,84 @@ export const CATEGORY_ACCOUNT_MAP = {
     'Product Sales': { incomeAccount: '4100', defaultAssetAccount: '1010' },
     'Service Sales': { incomeAccount: '4110', defaultAssetAccount: '1010' },
 
-    // Expense Categories
-    'Food': { expenseAccount: '5000', defaultAssetAccount: '1000' },
-    'Transport': { expenseAccount: '5010', defaultAssetAccount: '1000' },
-    'Housing': { expenseAccount: '5020', defaultAssetAccount: '1010' },
-    'Utilities': { expenseAccount: '5030', defaultAssetAccount: '1010' },
-    'Healthcare': { expenseAccount: '5040', defaultAssetAccount: '1000' },
-    'Education': { expenseAccount: '5050', defaultAssetAccount: '1010' },
-    'Entertainment': { expenseAccount: '5060', defaultAssetAccount: '1000' },
-    'Shopping': { expenseAccount: '5070', defaultAssetAccount: '1000' },
-    'Communication': { expenseAccount: '5080', defaultAssetAccount: '1030' },
-    'Insurance': { expenseAccount: '5100', defaultAssetAccount: '1010' },
-    'Donations': { expenseAccount: '5110', defaultAssetAccount: '1000' },
+    // Expense Categories (Aligned to new 6000 series)
+    'Food': { expenseAccount: '6100', defaultAssetAccount: '1000' },
+    'Groceries': { expenseAccount: '6110', defaultAssetAccount: '1000' },
+    'Transport': { expenseAccount: '6200', defaultAssetAccount: '1000' },
+    'Housing': { expenseAccount: '6000', defaultAssetAccount: '1010' },
+    'Rent': { expenseAccount: '6010', defaultAssetAccount: '1010' },
+    'Utilities': { expenseAccount: '6000', defaultAssetAccount: '1010' },
+    'Healthcare': { expenseAccount: '6300', defaultAssetAccount: '1000' },
+    'Education': { expenseAccount: '6400', defaultAssetAccount: '1010' },
+    'Entertainment': { expenseAccount: '6500', defaultAssetAccount: '1000' },
+    'Shopping': { expenseAccount: '6140', defaultAssetAccount: '1000' },
+    'Communication': { expenseAccount: '6060', defaultAssetAccount: '1030' },
+    'Insurance': { expenseAccount: '6310', defaultAssetAccount: '1010' },
+    'Donations': { expenseAccount: '5199', defaultAssetAccount: '1000' },
     'Other Expenses': { expenseAccount: '5199', defaultAssetAccount: '1000' },
 
     // Business Expense Categories
     'COGS': { expenseAccount: '5200', defaultAssetAccount: '1300' },
-    'Bank Charges': { expenseAccount: '5250', defaultAssetAccount: '1010' },
-    'Interest Expense': { expenseAccount: '5260', defaultAssetAccount: '1010' },
+    'Bank Charges': { expenseAccount: '6610', defaultAssetAccount: '1010' },
+    'Interest Expense': { expenseAccount: '6620', defaultAssetAccount: '1010' },
     'Depreciation': { expenseAccount: '5300', defaultAssetAccount: '1590' },
     'Salaries': { expenseAccount: '5400', defaultAssetAccount: '1010' },
+
+    // Additional Standard Categories
+    'Subscriptions': { expenseAccount: '6510', defaultAssetAccount: '1000' },
+    'Personal Care': { expenseAccount: '6130', defaultAssetAccount: '1000' },
+    'Pet Care': { expenseAccount: '6450', defaultAssetAccount: '1000' },
+    'Childcare': { expenseAccount: '6430', defaultAssetAccount: '1000' },
+    'Gym': { expenseAccount: '6340', defaultAssetAccount: '1000' },
+    'Fitness': { expenseAccount: '6340', defaultAssetAccount: '1000' },
+};
+
+const KEYWORD_ACCOUNT_MAP = {
+    // Transport
+    'uber': '6250', 'bolt': '6250', 'lyft': '6250', 'taxify': '6250', 'taxi': '6250',
+    'fuel': '6210', 'gas': '6210', 'petrol': '6210', 'diesel': '6210', 'shell': '6210', 'total': '6210',
+    'parking': '6240', 'toll': '6240',
+    'bus': '6250', 'matatu': '6250', 'fare': '6250',
+    'auto': '6230', 'mechanic': '6230', 'repair': '6230', 'service': '6230',
+
+    // Food
+    'restaurant': '6120', 'cafe': '6120', 'coffee': '6120', 'java': '6120', 'artcaffe': '6120', 'kfc': '6120', 'burger': '6120', 'pizza': '6120', 'dinner': '6120', 'lunch': '6120', 'breakfast': '6120',
+    'supermarket': '6110', 'grocy': '6110', 'naivas': '6110', 'carrefour': '6110', 'quickmart': '6110', 'chandarana': '6110',
+
+    // Utilities
+    'kplc': '6040', 'power': '6040', 'electricity': '6040', 'token': '6040',
+    'water': '6050', 'sewer': '6050', 'nairobi water': '6050',
+    'internet': '6060', 'wifi': '6060', 'zuku': '6060', 'safaricom home': '6060', 'jtl': '6060', 'starlink': '6060',
+    'airtime': '6060', 'safaricom': '6060', 'airtel': '6060', 'telkom': '6060', 'data': '6060', 'bundle': '6060',
+
+    // Housing
+    'rent': '6010', 'landlord': '6010', 'housing': '6010',
+    'clean': '6080', 'maid': '6080', 'househelp': '6080',
+
+    // Subscriptions
+    'netflix': '6510', 'spotify': '6510', 'youtube': '6510', 'prime': '6510', 'apple': '6510', 'showmax': '6510', 'dstv': '6060', 'gotv': '6060',
+
+    // Shopping
+    'cloth': '6140', 'shoe': '6140', 'wear': '6140', 'fashion': '6140', 'dress': '6140', 'shirt': '6140',
+    'jumia': '5199', 'amazon': '5199',
+
+    // Entertainment
+    'movie': '6520', 'cinema': '6520', 'imax': '6520', 'ticket': '6520',
+    'game': '6530', 'bet': '6530', 'sport': '6440',
+
+    // Healthcare
+    'drug': '6330', 'pharmacy': '6330', 'chemist': '6330', 'med': '6330',
+    'doctor': '6320', 'hospital': '6320', 'clinic': '6320', 'consultation': '6320', 'dental': '6320', 'dentist': '6320',
+    'insurance': '6310', 'nhif': '6310', 'premium': '6310',
+    'gym': '6340', 'fitness': '6340', 'workout': '6340',
+
+    // Education
+    'school': '6410', 'tuition': '6410', 'fee': '6410', 'university': '6410', 'college': '6410',
+    'book': '6420', 'course': '6410', 'class': '6410', 'stationery': '6420', 'uniform': '6420',
+
+    // Family
+    'nanny': '6430', 'baby': '6430', 'child': '6430', 'daycare': '6430',
+    'pet': '6450', 'vet': '6450', 'dog': '6450', 'cat': '6450',
 };
 
 // ============================================
@@ -198,34 +283,69 @@ export const CATEGORY_ACCOUNT_MAP = {
  */
 export async function seedFamilyCoA(tenantId, currency = 'KES') {
     try {
-        // Check if accounts already exist
+        // Check if accounts already exist (just for logging)
         const existingAccounts = await prisma.account.count({
             where: { tenantId }
         });
 
         if (existingAccounts > 0) {
-            console.log(`[AccountingService] Tenant ${tenantId} already has ${existingAccounts} accounts, skipping seed`);
-            return;
+            console.log(`[AccountingService] Tenant ${tenantId} has ${existingAccounts} accounts. Proceeding to sync/seed new accounts...`);
         }
 
-        // Create all accounts from template
+        // 1. First Pass: Create all accounts (without parent links)
+        // usage of skipDuplicates ensures we don't fail on existing accounts
         const accountsToCreate = FAMILY_COA_TEMPLATE.map(acc => ({
             tenantId,
             code: acc.code,
             name: acc.name,
             type: acc.type,
+            subtype: acc.subtype,
             description: acc.description || null,
-            isSystem: acc.isSystem,
+            isSystem: acc.isSystem || false,
             isContra: acc.isContra || false,
+            isPaymentEligible: acc.isPaymentEligible || false,
             isActive: true,
             currency,
         }));
 
         await prisma.account.createMany({
             data: accountsToCreate,
+            skipDuplicates: true,
         });
 
-        console.log(`[AccountingService] Seeded ${accountsToCreate.length} accounts for tenant ${tenantId}`);
+        console.log(`[AccountingService] Synced base accounts`);
+
+        // 2. Second Pass: Link Parents
+        // We need to fetch the created accounts to get their IDs
+        const createdAccounts = await prisma.account.findMany({
+            where: { tenantId },
+            select: { id: true, code: true }
+        });
+
+        // Create a map for quick lookup: code -> id
+        const accountMap = {};
+        createdAccounts.forEach(acc => {
+            accountMap[acc.code] = acc.id;
+        });
+
+        // Loop through template and update parents where applicable
+        let parentUpdates = 0;
+        for (const templateAcc of FAMILY_COA_TEMPLATE) {
+            if (templateAcc.parentCode) {
+                const childId = accountMap[templateAcc.code];
+                const parentId = accountMap[templateAcc.parentCode];
+
+                if (childId && parentId) {
+                    await prisma.account.update({
+                        where: { id: childId },
+                        data: { parentId }
+                    });
+                    parentUpdates++;
+                }
+            }
+        }
+
+        console.log(`[AccountingService] Linked ${parentUpdates} parent-child relationships`);
 
         return accountsToCreate.length;
     } catch (error) {
@@ -274,17 +394,7 @@ const FAMILY_CATEGORIES_TEMPLATE = [
  */
 export async function seedFamilyCategories(tenantId) {
     try {
-        // Check if categories already exist
-        const existingCategories = await prisma.category.count({
-            where: { tenantId }
-        });
-
-        if (existingCategories > 0) {
-            console.log(`[AccountingService] Tenant ${tenantId} already has ${existingCategories} categories, skipping seed`);
-            return;
-        }
-
-        // Create all categories from template
+        // Create all categories from template, skipping duplicates if they exist
         const categoriesToCreate = FAMILY_CATEGORIES_TEMPLATE.map(cat => ({
             tenantId,
             name: cat.name,
@@ -295,9 +405,16 @@ export async function seedFamilyCategories(tenantId) {
 
         await prisma.category.createMany({
             data: categoriesToCreate,
+            skipDuplicates: true,
         });
 
-        console.log(`[AccountingService] Seeded ${categoriesToCreate.length} categories for tenant ${tenantId}`);
+        // Clean up duplicates if any somehow exist (simple name-based check)
+        // Group by name/type and delete ids that are not the first one
+        // Note: Prisma doesn't have a simple distinct-delete, so we do this manually if needed.
+        // For now, createMany with skipDuplicates handles the "Preventing future creation" part.
+        // To fix CURRENT duplicates, we can run a cleanup query.
+
+        console.log(`[AccountingService] Synced/Seeded categories for tenant ${tenantId}`);
 
         return categoriesToCreate.length;
     } catch (error) {
@@ -374,7 +491,22 @@ export async function seedFamilyPaymentMethods(tenantId) {
  * @returns {Object} Mapping with debitAccountCode and creditAccountCode
  */
 export function getAccountMapping(category, type) {
-    const mapping = CATEGORY_ACCOUNT_MAP[category];
+    // 1. Exact or Alias Map Lookup
+    let mapping = CATEGORY_ACCOUNT_MAP[category];
+
+    // 2. Keyword Lookup (if no exact match and type is EXPENSE)
+    if (!mapping && type === 'EXPENSE' && category) {
+        const lowerCat = category.toLowerCase();
+        for (const [keyword, code] of Object.entries(KEYWORD_ACCOUNT_MAP)) {
+            if (lowerCat.includes(keyword)) {
+                mapping = {
+                    expenseAccount: code,
+                    defaultAssetAccount: '1000'
+                };
+                break;
+            }
+        }
+    }
 
     if (!mapping) {
         // Default fallback
@@ -447,19 +579,57 @@ export async function createJournalEntry({
     tenantId,
     debitAccountId,
     creditAccountId,
+    lines, // Optional: Array of { accountId, debit, credit, description }
     amount,
     description,
     date = new Date(),
     createdById = null,
 }) {
-    // Validate: Both accounts must exist
-    if (!debitAccountId || !creditAccountId) {
-        throw new Error('Both debit and credit accounts are required');
-    }
+    let journalLines = [];
 
-    // Validate: Amount must be positive
-    if (amount <= 0) {
-        throw new Error('Amount must be greater than zero');
+    // Scenario 1: Legacy (Debit/Credit pair provided)
+    if (!lines) {
+        // Validate: Both accounts must exist
+        if (!debitAccountId || !creditAccountId) {
+            throw new Error('Both debit and credit accounts are required');
+        }
+
+        // Validate: Amount must be positive
+        if (!amount || amount <= 0) {
+            throw new Error('Amount must be greater than zero');
+        }
+
+        journalLines = [
+            {
+                accountId: debitAccountId,
+                debit: amount,
+                credit: 0,
+                description: `Debit: ${description}`,
+            },
+            {
+                accountId: creditAccountId,
+                debit: 0,
+                credit: amount,
+                description: `Credit: ${description}`,
+            }
+        ];
+    }
+    // Scenario 2: Explicit Lines (Split Transaction)
+    else {
+        if (!Array.isArray(lines) || lines.length < 2) {
+            throw new Error('Journal must have at least 2 lines');
+        }
+
+        // Calculate totals to ensure balance
+        const totalDebit = lines.reduce((sum, line) => sum + Number(line.debit || 0), 0);
+        const totalCredit = lines.reduce((sum, line) => sum + Number(line.credit || 0), 0);
+
+        // Allow strictly equal or very close (floating point tolerance)
+        if (Math.abs(totalDebit - totalCredit) > 0.05) {
+            throw new Error(`Journal Entry is not balanced. Debits: ${totalDebit}, Credits: ${totalCredit}`);
+        }
+
+        journalLines = lines;
     }
 
     // Create journal entry with lines in a transaction
@@ -476,27 +646,18 @@ export async function createJournalEntry({
             },
         });
 
-        // 2. Create debit line
-        await tx.journalLine.create({
-            data: {
-                journalId: journalEntry.id,
-                accountId: debitAccountId,
-                debit: amount,
-                credit: 0,
-                description: `Debit: ${description}`,
-            },
-        });
-
-        // 3. Create credit line
-        await tx.journalLine.create({
-            data: {
-                journalId: journalEntry.id,
-                accountId: creditAccountId,
-                debit: 0,
-                credit: amount,
-                description: `Credit: ${description}`,
-            },
-        });
+        // 2. Create lines
+        for (const line of journalLines) {
+            await tx.journalLine.create({
+                data: {
+                    journalId: journalEntry.id,
+                    accountId: line.accountId,
+                    debit: Number(line.debit || 0),
+                    credit: Number(line.credit || 0),
+                    description: line.description || description,
+                },
+            });
+        }
 
         // Return journal with lines
         return tx.journal.findUnique({

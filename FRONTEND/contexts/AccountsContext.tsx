@@ -20,20 +20,29 @@ export const AccountsProvider = ({ children }: { children: ReactNode }) => {
     try {
       setLoading(true);
       setError(null);
-      
+
+      // Check if user is authenticated before loading accounts
+      const token = await require('@react-native-async-storage/async-storage').default.getItem('authToken');
+      if (!token) {
+        console.log('⚠️ No auth token found, skipping account load');
+        setAccounts([]);
+        setLoading(false);
+        return;
+      }
+
       console.log('🔄 Loading accounts from database...');
-      
+
       // Fetch accounts with balances from backend
       const data = await apiService.listAccounts({ includeBalances: true });
-      
+
       console.log('✅ Accounts loaded successfully:', {
         count: data?.length || 0,
         types: [...new Set((data || []).map(a => a.type))],
         sample: (data || []).slice(0, 3).map(a => ({ code: a.code, name: a.name, id: a.id }))
       });
-      
+
       setAccounts(data || []);
-      
+
     } catch (err: any) {
       console.error('❌ Error loading accounts:', err);
       const errorMsg = err?.error || err?.message || 'Failed to load accounts from server';
