@@ -198,15 +198,33 @@ export default function AddIncomeScreen() {
     }),
     [allAccounts]);
 
+  // PERFECT PAYSLIP ENGINE: Separate Statutory Deductions from Transfers
   const deductionHeadings = useMemo(() => {
-    return allAccounts.filter(a => {
+    const statutory: Array<Account & { category: string }> = []; // Taxes & Mandatory Contributions (Expenses)
+    const transfers: Array<Account & { category: string }> = [];  // Sacco, Loans (Assets/Liabilities)
+
+    allAccounts.forEach(a => {
       const code = parseInt(a.code || '0');
-      if (a.type === 'EXPENSE' && code >= 6600 && code < 6700) return true; // Taxes
-      if (a.type === 'LIABILITY' && (a.name.includes('Tax') || a.name.includes('PAYE'))) return true;
-      if (a.type === 'LIABILITY' && (a.name.includes('Loan') || a.name.includes('Sacco'))) return true;
-      if (a.type === 'ASSET' && (a.name.includes('Saving') || a.name.includes('Sacco'))) return true;
-      return false;
-    }).sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+
+      // STATUTORY DEDUCTIONS (These reduce Net Worth - Money is GONE)
+      if (a.type === 'EXPENSE' && code >= 6600 && code < 6700) {
+        statutory.push({ ...a, category: 'Statutory' });
+      }
+
+      // TRANSFERS (These maintain Net Worth - Money is MOVED)
+      if (a.type === 'LIABILITY' && (a.name.includes('Loan') || a.name.includes('Sacco'))) {
+        transfers.push({ ...a, category: 'Transfer' });
+      }
+      if (a.type === 'ASSET' && (a.name.includes('Saving') || a.name.includes('Sacco'))) {
+        transfers.push({ ...a, category: 'Transfer' });
+      }
+    });
+
+    // Sort each group by code, then combine with statutory first
+    statutory.sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+    transfers.sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+
+    return [...statutory, ...transfers];
   }, [allAccounts]);
 
   // Calculations

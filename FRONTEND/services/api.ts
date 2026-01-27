@@ -100,6 +100,7 @@ export interface Account {
   name: string;
   code?: string;
   type: 'ASSET' | 'LIABILITY' | 'INCOME' | 'EXPENSE' | 'EQUITY';
+  subtype?: string;
   currency?: string;
   parentAccountId?: string | null;
   balance?: number;
