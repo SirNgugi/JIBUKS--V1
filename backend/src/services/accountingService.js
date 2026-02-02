@@ -89,7 +89,7 @@ export const FAMILY_COA_TEMPLATE = [
     { code: '1220', name: 'Rent Security Deposits', type: 'ASSET', description: 'Refundable deposit held by Landlord', isSystem: false, isContra: false, subtype: 'receivable' },
     { code: '1230', name: 'Utility Deposits', type: 'ASSET', description: 'Deposit held by Kenya Power/Water', isSystem: false, isContra: false, subtype: 'receivable' },
     { code: '1240', name: 'Prepaid Expenses', type: 'ASSET', description: 'Services paid for but not used yet', isSystem: false, isContra: false, subtype: 'receivable' },
-    { code: '1250', name: 'Accounts Receivable', type: 'ASSET', description: 'Money owed by customers', isSystem: true, isContra: false, subtype: 'ar' },
+    { code: '1250', name: 'Accounts Receivable', type: 'ASSET', description: 'Money owed by customers', isSystem: true, isContra: false, subtype: 'ar', systemTag: 'AR' },
 
     // ----------------------------------------
     // 3. FIXED ASSETS - Physical Wealth (1500-1599)
@@ -419,7 +419,7 @@ export async function seedFamilyCoA(tenantId, currency = 'KES') {
                     name: acc.name,
                     description: acc.description,
                     subtype: acc.subtype,
-                    // We don't update type/conra/system to avoid breaking things, unless necessary
+                    ...(acc.systemTag != null && { systemTag: acc.systemTag }),
                 },
                 create: {
                     tenantId,
@@ -431,6 +431,7 @@ export async function seedFamilyCoA(tenantId, currency = 'KES') {
                     isSystem: acc.isSystem || false,
                     isContra: acc.isContra || false,
                     isPaymentEligible: acc.isPaymentEligible || false,
+                    systemTag: acc.systemTag || null,
                     isActive: true,
                     currency,
                 }
@@ -678,6 +679,56 @@ export async function resolveAccountIds(tenantId, debitCode, creditCode) {
         debitAccountId: debitAccount?.id || null,
         creditAccountId: creditAccount?.id || null,
     };
+}
+
+// ============================================
+// BUSINESS / INVOICE COA HELPERS
+// ============================================
+
+/** Resolve Accounts Receivable account (code 1250 or systemTag AR) for a tenant */
+export async function getAccountsReceivableAccountId(tenantId) {
+    const account = await prisma.account.findFirst({
+        where: {
+            tenantId,
+            OR: [
+                { code: '1250' },
+                { systemTag: 'AR' },
+                { subtype: 'ar' },
+            ],
+            isActive: true,
+        },
+    });
+    return account?.id ?? null;
+}
+
+/** Resolve default revenue account (4100 Product Sales) for invoice line items */
+export async function getDefaultRevenueAccountId(tenantId) {
+    const account = await prisma.account.findFirst({
+        where: {
+            tenantId,
+            type: 'INCOME',
+            OR: [
+                { code: '4100' },
+                { code: '4110' },
+            ],
+            isActive: true,
+        },
+        orderBy: { code: 'asc' },
+    });
+    return account?.id ?? null;
+}
+
+/** Resolve default payment (cash/bank) account for invoice payments - prefers 1010 M-PESA */
+export async function getDefaultPaymentAccountId(tenantId) {
+    const account = await prisma.account.findFirst({
+        where: {
+            tenantId,
+            isPaymentEligible: true,
+            isActive: true,
+        },
+        orderBy: { code: 'asc' },
+    });
+    return account?.id ?? null;
 }
 
 // ============================================
