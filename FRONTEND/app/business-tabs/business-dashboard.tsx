@@ -13,7 +13,10 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiService from '@/services/api';
+
+const ONBOARDING_KEY = 'businessOnboardingComplete';
 
 const { width } = Dimensions.get('window');
 
@@ -42,10 +45,18 @@ export default function BusinessDashboardScreen() {
     const params = useLocalSearchParams();
 
     const [userName, setUserName] = useState<string>('');
-    const [summary, setSummary] = useState<{ totalIncome: number; totalExpenses: number; balance: number } | null>(null);
+    const [summary, setSummary] = useState<{
+        revenue: number;
+        expenses: number;
+        netIncome: number;
+        cashBankBalance: number;
+        arBalance: number;
+    } | null>(null);
+    const [counts, setCounts] = useState<{ unpaidInvoices: number; overdueInvoices: number; customers: number } | null>(null);
     const [recentActivity, setRecentActivity] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [onboardingChecked, setOnboardingChecked] = useState(false);
 
     const businessName = Array.isArray(params.businessName)
         ? params.businessName[0]
@@ -65,26 +76,33 @@ export default function BusinessDashboardScreen() {
 
     const loadDashboard = useCallback(async () => {
         try {
-            const data = await apiService.getDashboard();
+            const data = await apiService.getBusinessDashboard();
             if (data?.summary) {
                 setSummary({
-                    totalIncome: Number(data.summary.totalIncome ?? 0),
-                    totalExpenses: Number(data.summary.totalExpenses ?? 0),
-                    balance: Number(data.summary.balance ?? 0),
+                    revenue: Number(data.summary.revenue ?? 0),
+                    expenses: Number(data.summary.expenses ?? 0),
+                    netIncome: Number(data.summary.netIncome ?? 0),
+                    cashBankBalance: Number(data.summary.cashBankBalance ?? 0),
+                    arBalance: Number(data.summary.arBalance ?? 0),
                 });
             } else {
-                const stats = await apiService.getTransactionStats();
-                setSummary({
-                    totalIncome: stats.totalIncome ?? 0,
-                    totalExpenses: stats.totalExpenses ?? 0,
-                    balance: (stats.totalIncome ?? 0) - (stats.totalExpenses ?? 0),
-                });
+                setSummary({ revenue: 0, expenses: 0, netIncome: 0, cashBankBalance: 0, arBalance: 0 });
             }
-            const list = data?.recentTransactions ?? [];
-            setRecentActivity(Array.isArray(list) ? list.slice(0, 10) : []);
+            if (data?.counts) {
+                setCounts({
+                    unpaidInvoices: Number(data.counts.unpaidInvoices ?? 0),
+                    overdueInvoices: Number(data.counts.overdueInvoices ?? 0),
+                    customers: Number(data.counts.customers ?? 0),
+                });
+            } else {
+                setCounts({ unpaidInvoices: 0, overdueInvoices: 0, customers: 0 });
+            }
+            const list = data?.recentActivity ?? [];
+            setRecentActivity(Array.isArray(list) ? list : []);
         } catch (e) {
-            console.error('Error loading dashboard:', e);
-            setSummary({ totalIncome: 0, totalExpenses: 0, balance: 0 });
+            console.error('Error loading business dashboard:', e);
+            setSummary({ revenue: 0, expenses: 0, netIncome: 0, cashBankBalance: 0, arBalance: 0 });
+            setCounts({ unpaidInvoices: 0, overdueInvoices: 0, customers: 0 });
             setRecentActivity([]);
         } finally {
             setLoading(false);
@@ -92,13 +110,34 @@ export default function BusinessDashboardScreen() {
         }
     }, []);
 
+    // Guard: redirect to business-tabs (onboarding) if setup not completed
+    useEffect(() => {
+        let mounted = true;
+        async function checkOnboarding() {
+            try {
+                const completed = await AsyncStorage.getItem(ONBOARDING_KEY);
+                if (!mounted) return;
+                if (completed !== 'true') {
+                    router.replace('/business-tabs');
+                    return;
+                }
+                setOnboardingChecked(true);
+            } catch {
+                if (mounted) router.replace('/business-tabs');
+            }
+        }
+        checkOnboarding();
+        return () => { mounted = false };
+    }, [router]);
+
     useEffect(() => {
         loadUserData();
     }, [loadUserData]);
 
     useEffect(() => {
+        if (!onboardingChecked) return;
         loadDashboard();
-    }, [loadDashboard]);
+    }, [loadDashboard, onboardingChecked]);
 
     const onRefresh = useCallback(() => {
         setRefreshing(true);
@@ -106,6 +145,16 @@ export default function BusinessDashboardScreen() {
     }, [loadDashboard]);
 
     const displayName = userName || ownerName || 'There';
+
+    // Wait for onboarding check before showing dashboard (avoids flash before redirect)
+    if (!onboardingChecked) {
+        return (
+            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                <ActivityIndicator size="large" color="#1e3a8a" />
+                <Text style={{ marginTop: 12, fontSize: 14, color: '#64748b' }}>Loading...</Text>
+            </View>
+        );
+    }
 
     return (
         <View style={styles.container}>
@@ -138,45 +187,77 @@ export default function BusinessDashboardScreen() {
                     </LinearGradient>
                 </View>
 
-                {/* Summary Section */}
+                {/* Summary Section (CoA-based: this month revenue, expenses, net) */}
                 <View style={styles.summarySection}>
                     <View style={styles.summaryCard}>
-                        <Text style={styles.summaryHeader}>This month</Text>
+                        <Text style={styles.summaryHeader}>This month (from Chart of Accounts)</Text>
                         {loading ? (
                             <View style={styles.summaryRow}>
                                 <ActivityIndicator size="small" color="#1e3a8a" style={{ flex: 1 }} />
                             </View>
                         ) : (
-                            <View style={styles.summaryRow}>
-                                <View style={styles.summaryItem}>
-                                    <View style={styles.summaryValueContainer}>
-                                        <Text style={styles.emoji}>💰</Text>
-                                        <Text style={styles.currencyValue}>{formatCurrency(summary?.totalIncome ?? 0)}</Text>
+                            <>
+                                <View style={styles.summaryRow}>
+                                    <View style={styles.summaryItem}>
+                                        <View style={styles.summaryValueContainer}>
+                                            <Text style={styles.emoji}>💰</Text>
+                                            <Text style={styles.currencyValue}>{formatCurrency(summary?.revenue ?? 0)}</Text>
+                                        </View>
+                                        <Text style={styles.summaryLabel}>Revenue</Text>
                                     </View>
-                                    <Text style={styles.summaryLabel}>Income</Text>
-                                </View>
-                                <View style={styles.summaryItem}>
-                                    <View style={styles.summaryValueContainer}>
-                                        <Text style={styles.emoji}>💸</Text>
-                                        <Text style={styles.currencyValue}>{formatCurrency(summary?.totalExpenses ?? 0)}</Text>
+                                    <View style={styles.summaryItem}>
+                                        <View style={styles.summaryValueContainer}>
+                                            <Text style={styles.emoji}>💸</Text>
+                                            <Text style={styles.currencyValue}>{formatCurrency(summary?.expenses ?? 0)}</Text>
+                                        </View>
+                                        <Text style={styles.summaryLabel}>Expenses</Text>
                                     </View>
-                                    <Text style={styles.summaryLabel}>Expenses</Text>
+                                    <View style={styles.summaryItem}>
+                                        <View style={styles.summaryValueContainer}>
+                                            <Text style={styles.emoji}>📊</Text>
+                                            <Text style={[styles.currencyValue, { color: (summary?.netIncome ?? 0) >= 0 ? '#10b981' : '#ef4444' }]}>
+                                                {formatCurrency(summary?.netIncome ?? 0)}
+                                            </Text>
+                                        </View>
+                                        <Text style={styles.summaryLabel}>Net</Text>
+                                    </View>
                                 </View>
-                                <View style={styles.summaryItem}>
-                                    <View style={styles.summaryValueContainer}>
-                                        <Text style={styles.emoji}>📊</Text>
-                                        <Text style={[styles.currencyValue, { color: (summary?.balance ?? 0) >= 0 ? '#10b981' : '#ef4444' }]}>
-                                            {formatCurrency(summary?.balance ?? 0)}
+                                <View style={[styles.summaryRow, { marginTop: 10 }]}>
+                                    <View style={styles.summaryItem}>
+                                        <Text style={styles.currencyValue}>{formatCurrency(summary?.cashBankBalance ?? 0)}</Text>
+                                        <Text style={styles.summaryLabel}>Cash & Bank</Text>
+                                    </View>
+                                    <View style={styles.summaryItem}>
+                                        <Text style={[styles.currencyValue, { color: (summary?.arBalance ?? 0) > 0 ? '#f59e0b' : '#64748b' }]}>
+                                            {formatCurrency(summary?.arBalance ?? 0)}
                                         </Text>
+                                        <Text style={styles.summaryLabel}>Receivables</Text>
                                     </View>
-                                    <Text style={styles.summaryLabel}>Balance</Text>
                                 </View>
-                            </View>
+                            </>
                         )}
                     </View>
                 </View>
 
-                {/* Action Buttons Row */}
+                {/* Counts: unpaid, overdue, customers */}
+                {counts && (
+                    <View style={styles.countsSection}>
+                        <TouchableOpacity style={styles.countChip} onPress={() => router.push('/invoices' as any)}>
+                            <Text style={styles.countValue}>{counts.unpaidInvoices}</Text>
+                            <Text style={styles.countLabel}>Unpaid</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.countChip, counts.overdueInvoices > 0 && styles.countChipAlert]}>
+                            <Text style={[styles.countValue, counts.overdueInvoices > 0 && { color: '#ef4444' }]}>{counts.overdueInvoices}</Text>
+                            <Text style={styles.countLabel}>Overdue</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.countChip} onPress={() => router.push('/business-tabs/sales/customers' as any)}>
+                            <Text style={styles.countValue}>{counts.customers}</Text>
+                            <Text style={styles.countLabel}>Customers</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                {/* Action Buttons Row — Cash Sale and Credit Sale post to Chart of Accounts (AR, Revenue, Cash/Bank) */}
                 <View style={styles.actionsRow}>
                     <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/business-tabs/sales/cash-sale')}>
                         <Text style={styles.actionButtonText}>Cash Sale</Text>
@@ -206,25 +287,29 @@ export default function BusinessDashboardScreen() {
                     </View>
                 </View>
 
-                {/* Recent Activity */}
+                {/* Recent Activity (invoices, payments, transactions from CoA) */}
                 <View style={styles.activitySection}>
                     <View style={styles.activityContainer}>
                         <Text style={styles.activityTitle}>Recent Activity</Text>
                         {recentActivity.length === 0 ? (
-                            <Text style={styles.activityEmpty}>No recent transactions</Text>
+                            <Text style={styles.activityEmpty}>No recent activity</Text>
                         ) : (
-                            recentActivity.map((item: any) => (
-                                <View key={item.id} style={styles.activityItem}>
-                                    <Ionicons
-                                        name={item.type === 'INCOME' ? 'arrow-down-circle' : 'arrow-up-circle'}
-                                        size={16}
-                                        color={item.type === 'INCOME' ? '#10b981' : '#ef4444'}
-                                    />
-                                    <Text style={styles.activityText} numberOfLines={1}>
-                                        {formatActivityDate(item.date)} · {item.description || item.category || 'Transaction'} · {formatCurrency(Number(item.amount ?? 0))}
-                                    </Text>
-                                </View>
-                            ))
+                            recentActivity.map((item: any) => {
+                                const amt = Number(item.amount ?? 0);
+                                const isInflow = amt > 0;
+                                return (
+                                    <View key={item.id} style={styles.activityItem}>
+                                        <Ionicons
+                                            name={isInflow ? 'arrow-down-circle' : 'arrow-up-circle'}
+                                            size={16}
+                                            color={isInflow ? '#10b981' : '#ef4444'}
+                                        />
+                                        <Text style={styles.activityText} numberOfLines={1}>
+                                            {formatActivityDate(item.date)} · {item.description || item.type || 'Activity'} · {formatCurrency(Math.abs(amt))}
+                                        </Text>
+                                    </View>
+                                );
+                            })
                         )}
                     </View>
                 </View>
@@ -325,6 +410,34 @@ const styles = StyleSheet.create({
     summarySection: {
         marginTop: 40,
         paddingHorizontal: 15,
+    },
+    countsSection: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        paddingHorizontal: 20,
+        marginTop: 12,
+        marginBottom: 8,
+    },
+    countChip: {
+        backgroundColor: '#f1f5f9',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        alignItems: 'center',
+        minWidth: 80,
+    },
+    countChipAlert: {
+        backgroundColor: '#fef2f2',
+    },
+    countValue: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#1e3a8a',
+    },
+    countLabel: {
+        fontSize: 11,
+        color: '#64748b',
+        marginTop: 2,
     },
     summaryCard: {
         backgroundColor: '#fff',
