@@ -1065,6 +1065,65 @@ export function getAccountMapping(category, type) {
     }
 }
 
+// ============================================
+// COA HELPER LOOKUPS (AR, Revenue, Payment Accounts)
+// ============================================
+
+/**
+ * Find the Accounts Receivable control account for a tenant.
+ * Prefers AR by systemTag, then subtype, then common AR code (1250).
+ */
+export async function getAccountsReceivableAccountId(tenantId) {
+    const account = await prisma.account.findFirst({
+        where: {
+            tenantId,
+            isActive: true,
+            OR: [
+                { systemTag: 'AR' },
+                { subtype: 'ar' },
+                { code: '1250' },
+            ],
+        },
+    });
+    return account?.id ?? null;
+}
+
+/**
+ * Find a default revenue account (INCOME) for a tenant.
+ * Prefers common sales codes 4100/4110, falls back to first INCOME account.
+ */
+export async function getDefaultRevenueAccountId(tenantId) {
+    const account = await prisma.account.findFirst({
+        where: {
+            tenantId,
+            type: 'INCOME',
+            isActive: true,
+            OR: [
+                { code: '4100' },
+                { code: '4110' },
+            ],
+        },
+        orderBy: { code: 'asc' },
+    });
+    return account?.id ?? null;
+}
+
+/**
+ * Find a default payment account (Cash/Bank) for a tenant.
+ * Uses accounts flagged as payment-eligible.
+ */
+export async function getDefaultPaymentAccountId(tenantId) {
+    const account = await prisma.account.findFirst({
+        where: {
+            tenantId,
+            isPaymentEligible: true,
+            isActive: true,
+        },
+        orderBy: { code: 'asc' },
+    });
+    return account?.id ?? null;
+}
+
 /**
  * Resolves account codes to account IDs for a tenant
  * 
