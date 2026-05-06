@@ -29,7 +29,7 @@ export async function register(req, res, next) {
         }
 
         // 3. Check if admin already exists
-        const existing = await prisma.platformAdmin.findUnique({ where: { email } });
+        const existing = await prisma.admin.findUnique({ where: { email } });
         if (existing) {
             return res.status(409).json({ error: 'A platform admin already exists with this email' });
         }
@@ -38,7 +38,7 @@ export async function register(req, res, next) {
         const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
         // 5. Create Platform Admin
-        const admin = await prisma.platformAdmin.create({
+        const admin = await prisma.admin.create({
             data: {
                 name,
                 email,
@@ -82,7 +82,7 @@ export async function login(req, res, next) {
             return res.status(400).json({ error: 'Email and password are required' });
         }
 
-        const admin = await prisma.platformAdmin.findUnique({ where: { email } });
+        const admin = await prisma.admin.findUnique({ where: { email } });
         if (!admin) {
             return res.status(401).json({ error: 'Invalid platform credentials' });
         }

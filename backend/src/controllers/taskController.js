@@ -22,7 +22,6 @@ async function listTasks(req, res, next) {
 
     if (filter) {
       where.OR = [
-        { id: { contains: filter, mode: 'insensitive' } },
         { title: { contains: filter, mode: 'insensitive' } }
       ];
     }
@@ -104,7 +103,7 @@ async function createTask(req, res, next) {
  */
 async function updateTask(req, res, next) {
   try {
-    const { id } = req.params;
+    const id = parseInt(req.params.id);
     const updateData = { ...req.body };
 
     if (updateData.dueDate) {
@@ -130,7 +129,7 @@ async function updateTask(req, res, next) {
  */
 async function deleteTask(req, res, next) {
   try {
-    const { id } = req.params;
+    const id = parseInt(req.params.id);
     await prisma.adminTask.delete({ where: { id } });
     res.status(204).send();
   } catch (err) {
@@ -146,7 +145,7 @@ async function deleteTask(req, res, next) {
  */
 async function bulkDeleteTasks(req, res, next) {
   try {
-    const { ids } = req.body;
+    const ids = req.body.ids.map(id => parseInt(id));
     if (!ids || !Array.isArray(ids)) {
       return res.status(400).json({ error: 'Array of ids is required' });
     }
