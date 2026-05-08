@@ -55,10 +55,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="analytics"
         options={{
-          title: 'Suppliers',
+          title: 'Activity',
           tabBarIcon: ({ color, focused }) => (
             <View style={styles.iconContainer}>
-              <Ionicons name={focused ? 'search' : 'search-outline'} size={20} color={color} />
+              <Ionicons name={focused ? 'list' : 'list-outline'} size={20} color={color} />
             </View>
           ),
         }}
@@ -66,11 +66,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="transactions"
         options={{
-          title: 'Cheques',
-          href: null, // Hidden from tab bar
+          title: 'Goals',
           tabBarIcon: ({ color, focused }) => (
             <View style={styles.iconContainer}>
-              <Ionicons name={focused ? 'wallet' : 'wallet-outline'} size={20} color={color} />
+              <Ionicons name={focused ? 'flag' : 'flag-outline'} size={20} color={color} />
             </View>
           ),
         }}
@@ -78,10 +77,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="community"
         options={{
-          title: 'Records',
+          title: 'Reports',
           tabBarIcon: ({ color, focused }) => (
             <View style={styles.iconContainer}>
-              <Ionicons name={focused ? 'folder' : 'folder-outline'} size={20} color={color} />
+              <Ionicons name={focused ? 'stats-chart' : 'stats-chart-outline'} size={20} color={color} />
             </View>
           ),
         }}
@@ -89,10 +88,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Settings',
+          title: 'More',
           tabBarIcon: ({ color, focused }) => (
             <View style={styles.iconContainer}>
-              <Ionicons name={focused ? 'settings' : 'settings-outline'} size={20} color={color} />
+              <Ionicons name={focused ? 'ellipsis-horizontal-circle' : 'ellipsis-horizontal-circle-outline'} size={20} color={color} />
             </View>
           ),
         }}

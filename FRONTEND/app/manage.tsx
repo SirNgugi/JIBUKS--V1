@@ -262,7 +262,7 @@ export default function ManageScreen() {
 
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => router.push('/family-dreams' as any)}
+            onPress={() => router.push('/add-saving-goals' as any)}
           >
             <View style={styles.actionLeft}>
               <View style={[styles.actionIcon, { backgroundColor: '#ddd6fe' }]}>

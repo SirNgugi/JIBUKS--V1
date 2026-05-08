@@ -6,307 +6,245 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  Switch,
-  ActivityIndicator,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { confirmAndLogout } from '@/utils/logout';
+import { LinearGradient } from 'expo-linear-gradient';
 
-export default function SettingsScreen() {
+// ─── Design tokens ────────────────────────────────────────────────────────────
+const C = {
+  primary: '#1a3a8f',
+  primaryDark: '#0e2470',
+  accent: '#F97316',
+  gold: '#FFAA00',
+  white: '#ffffff',
+  bg: '#F5F7FA',
+  card: '#ffffff',
+  text: '#1F2937',
+  textLight: '#6B7280',
+  border: '#E5E7EB',
+};
+
+// ─── Menu sections matching Figma ─────────────────────────────────────────────
+const SECTIONS = [
+  {
+    label: 'FAMILY',
+    items: [
+      {
+        icon: 'people', iconBg: '#EEF2FF', iconColor: '#4F46E5',
+        title: 'Family Members', sub: 'Manage family members and roles',
+        route: '/family-settings',
+      },
+    ],
+  },
+  {
+    label: 'COMMUNITY',
+    items: [
+      {
+        icon: 'people-circle', iconBg: '#F0FDF4', iconColor: '#16A34A',
+        title: 'Groups (Chama)', sub: 'Track contributions and group savings',
+        route: '/manage',
+      },
+    ],
+  },
+  {
+    label: 'PLANNING',
+    items: [
+      {
+        icon: 'wallet', iconBg: '#FFF7ED', iconColor: '#F97316',
+        title: 'Budgets', sub: 'Set and manage monthly budgets',
+        route: '/manage',
+      },
+      {
+        icon: 'refresh-circle', iconBg: '#EEF2FF', iconColor: '#7C3AED',
+        title: 'Recurring Payments', sub: 'Automate regular expenses',
+        route: '/manage',
+      },
+    ],
+  },
+  {
+    label: 'INSIGHTS',
+    items: [
+      {
+        icon: 'trending-up', iconBg: '#F0FDF4', iconColor: '#16A34A',
+        title: 'Net Worth', sub: 'Track assets and liabilities',
+        route: '/manage',
+      },
+    ],
+  },
+  {
+    label: 'CONNECTIONS',
+    items: [
+      {
+        icon: 'phone-portrait', iconBg: '#F0FDF4', iconColor: '#16A34A',
+        title: 'M-Pesa', sub: 'Connect and manage mobile money',
+        route: '/banking',
+      },
+    ],
+  },
+  {
+    label: 'SYSTEM',
+    items: [
+      {
+        icon: 'settings', iconBg: '#F5F5F5', iconColor: '#6B7280',
+        title: 'Settings', sub: 'App preferences and account settings',
+        route: '/manage',
+      },
+    ],
+  },
+];
+
+export default function MoreScreen() {
   const router = useRouter();
-  const { logout, isLoading } = useAuth();
-  const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
-  const [darkModeEnabled, setDarkModeEnabled] = React.useState(false);
+  const { user, logout } = useAuth();
 
   const handleLogout = async () => {
-    confirmAndLogout(logout, router.replace);
-  };
-
-  const settingsCategories = [
-    {
-      title: 'FAMILY & MEMBERS',
-      items: [
-        { id: 1, name: 'Family Members', icon: 'people', route: '/family-settings', color: '#122f8a' },
-        { id: 2, name: 'Permissions', icon: 'shield-checkmark', route: '/family-settings', color: '#10b981' },
-      ],
-    },
-    {
-      title: 'ACCOUNT SETUP',
-      items: [
-        { id: 3, name: 'Bank Accounts', icon: 'card', route: '/banking', color: '#2563eb' },
-        { id: 4, name: 'Mobile Money', icon: 'phone-portrait', route: '/banking', color: '#10b981' },
-        { id: 5, name: 'Wallet Setup', icon: 'wallet', route: '/banking', color: '#fe9900' },
-      ],
-    },
-    {
-      title: 'PREFERENCES',
-      items: [
-        { id: 6, name: 'App Theme', icon: 'color-palette', route: null, color: '#8b5cf6', hasSwitch: true },
-        { id: 7, name: 'Notifications', icon: 'notifications', route: null, color: '#f59e0b', hasSwitch: true },
-        { id: 8, name: 'Language', icon: 'language', route: '/manage', color: '#06b6d4' },
-      ],
-    },
-    {
-      title: 'SECURITY',
-      items: [
-        { id: 9, name: 'Security Options', icon: 'lock-closed', route: '/manage', color: '#ef4444' },
-        { id: 10, name: 'Change Password', icon: 'key', route: '/forgot-password', color: '#f59e0b' },
-        { id: 11, name: 'Two-Factor Auth', icon: 'finger-print', route: '/manage', color: '#10b981' },
-      ],
-    },
-    {
-      title: 'SUPPORT',
-      items: [
-        { id: 12, name: 'Help Center', icon: 'help-circle', route: '/manage', color: '#6366f1' },
-        { id: 13, name: 'Contact Support', icon: 'mail', route: '/manage', color: '#ec4899' },
-        { id: 14, name: 'About JIBUKS', icon: 'information-circle', route: '/manage', color: '#64748b' },
-      ],
-    },
-  ];
-
-  const renderSettingItem = (item: any) => {
-    if (item.hasSwitch) {
-      const isEnabled = item.id === 7 ? notificationsEnabled : darkModeEnabled;
-      const setEnabled = item.id === 7 ? setNotificationsEnabled : setDarkModeEnabled;
-
-      return (
-        <View key={item.id} style={styles.settingItem}>
-          <View style={[styles.settingIconContainer, { backgroundColor: `${item.color}15` }]}>
-            <Ionicons name={item.icon as any} size={22} color={item.color} />
-          </View>
-          <Text style={styles.settingName}>{item.name}</Text>
-          <Switch
-            value={isEnabled}
-            onValueChange={setEnabled}
-            trackColor={{ false: '#d1d5db', true: '#122f8a' }}
-            thumbColor={isEnabled ? '#fe9900' : '#f3f4f6'}
-          />
-        </View>
-      );
-    }
-
-    return (
-      <TouchableOpacity
-        key={item.id}
-        style={styles.settingItem}
-        onPress={() => item.route && router.push(item.route as any)}
-      >
-        <View style={[styles.settingIconContainer, { backgroundColor: `${item.color}15` }]}>
-          <Ionicons name={item.icon as any} size={22} color={item.color} />
-        </View>
-        <Text style={styles.settingName}>{item.name}</Text>
-        <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
-      </TouchableOpacity>
-    );
+    confirmAndLogout(logout, (path) => router.replace(path as any));
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <Ionicons name="settings" size={24} color="#ffffff" />
-          <Text style={styles.headerTitle}>Settings</Text>
-        </View>
-      </View>
+    <SafeAreaView style={s.root}>
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Profile Card */}
-        <View style={styles.section}>
-          <TouchableOpacity
-            style={styles.profileCard}
-            onPress={() => router.push('/profile' as any)}
-          >
-            <View style={styles.profileAvatar}>
-              <Ionicons name="person" size={32} color="#122f8a" />
-            </View>
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>Your Name</Text>
-              <Text style={styles.profileEmail}>email@example.com</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color="#9ca3af" />
+      {/* ── HEADER ── */}
+      <LinearGradient colors={[C.primary, C.primaryDark]} style={s.header}>
+        <View style={s.headerRow}>
+          <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={22} color={C.gold} />
           </TouchableOpacity>
+          <Text style={s.headerTitle}>MORE</Text>
+          <View style={s.avatarWrap}>
+            <View style={s.avatar}>
+              <Ionicons name="person" size={18} color={C.white} />
+            </View>
+            <View style={s.onlineDot} />
+          </View>
         </View>
+      </LinearGradient>
 
-        {/* Settings Categories */}
-        {settingsCategories.map((category, index) => (
-          <View key={index} style={styles.section}>
-            <Text style={styles.sectionTitle}>{category.title}</Text>
-            <View style={styles.categoryCard}>
-              {category.items.map((item, itemIndex) => (
-                <View key={item.id}>
-                  {renderSettingItem(item)}
-                  {itemIndex < category.items.length - 1 && <View style={styles.divider} />}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
+        {/* ── SECTIONS ── */}
+        {SECTIONS.map((section, si) => (
+          <View key={si} style={s.sectionBlock}>
+            <Text style={s.sectionLabel}>{section.label}</Text>
+            <View style={s.card}>
+              {section.items.map((item, ii) => (
+                <View key={ii}>
+                  <TouchableOpacity
+                    style={s.row}
+                    onPress={() => router.push(item.route as any)}
+                  >
+                    <View style={[s.iconCircle, { backgroundColor: item.iconBg }]}>
+                      <Ionicons name={item.icon as any} size={20} color={item.iconColor} />
+                    </View>
+                    <View style={s.rowText}>
+                      <Text style={s.rowTitle}>{item.title}</Text>
+                      <Text style={s.rowSub}>{item.sub}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={C.textLight} />
+                  </TouchableOpacity>
+                  {ii < section.items.length - 1 && <View style={s.divider} />}
                 </View>
               ))}
             </View>
           </View>
         ))}
 
-        {/* Logout Button */}
-        <View style={styles.section}>
-          <TouchableOpacity
-            style={styles.logoutButton}
-            onPress={handleLogout}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator size="small" color="#ef4444" />
-            ) : (
-              <Ionicons name="log-out" size={20} color="#ef4444" />
-            )}
-            <Text style={styles.logoutText}>{isLoading ? 'Logging out...' : 'Logout'}</Text>
+        {/* ── LOGOUT ── */}
+        <View style={s.sectionBlock}>
+          <TouchableOpacity style={s.logoutBtn} onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+            <Text style={s.logoutTxt}>Log Out</Text>
           </TouchableOpacity>
         </View>
 
-        {/* App Version */}
-        <View style={styles.versionContainer}>
-          <Text style={styles.versionText}>JIBUKS v1.0.0</Text>
-        </View>
-
-        {/* Bottom Spacing */}
-        <View style={{ height: 100 }} />
+        <View style={{ height: 110 }} />
       </ScrollView>
+
+      {/* ── FAB ── */}
+      <TouchableOpacity style={s.fab} onPress={() => router.push('/add-expense' as any)}>
+        <Ionicons name="add" size={30} color={C.white} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f0f4f8',
-  },
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: C.bg },
+  scroll: { paddingBottom: 20 },
+
   header: {
-    backgroundColor: '#122f8a',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 5,
+    paddingTop: Platform.OS === 'android' ? 50 : 54,
+    paddingBottom: 18,
+    paddingHorizontal: 20,
   },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+  headerRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  },
+  backBtn: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center', justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    letterSpacing: 0.5,
+    fontSize: 17, fontWeight: '800', color: C.gold, letterSpacing: 2,
   },
-  content: {
-    flex: 1,
+  avatarWrap: { position: 'relative' },
+  avatar: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 2, borderColor: C.gold,
+    alignItems: 'center', justifyContent: 'center',
   },
-  section: {
-    paddingHorizontal: 16,
-    marginTop: 20,
+  onlineDot: {
+    position: 'absolute', bottom: 1, right: 1,
+    width: 10, height: 10, borderRadius: 5,
+    backgroundColor: '#22C55E',
+    borderWidth: 1.5, borderColor: C.primary,
   },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#122f8a',
-    marginBottom: 12,
-    letterSpacing: 0.5,
+
+  sectionBlock: { paddingHorizontal: 16, marginTop: 20 },
+  sectionLabel: {
+    fontSize: 11, fontWeight: '700', color: C.textLight,
+    letterSpacing: 1.2, marginBottom: 8,
   },
-  profileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 10,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+  card: {
+    backgroundColor: C.card, borderRadius: 14,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+    overflow: 'hidden',
   },
-  profileAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#eff6ff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
+  row: {
+    flexDirection: 'row', alignItems: 'center',
+    padding: 14, gap: 14,
   },
-  profileInfo: {
-    flex: 1,
+  iconCircle: {
+    width: 44, height: 44, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
   },
-  profileName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1f2937',
-    marginBottom: 4,
+  rowText: { flex: 1 },
+  rowTitle: { fontSize: 15, fontWeight: '600', color: C.text, marginBottom: 2 },
+  rowSub: { fontSize: 12, color: C.textLight },
+  divider: { height: 1, backgroundColor: C.border, marginLeft: 72 },
+
+  logoutBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, backgroundColor: '#FFF5F5',
+    borderRadius: 14, padding: 14,
+    borderWidth: 1, borderColor: '#FECACA',
   },
-  profileEmail: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  categoryCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 10,
-    padding: 4,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  settingItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-  },
-  settingIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  settingName: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#1f2937',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#f3f4f6',
-    marginLeft: 64,
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 10,
-    padding: 16,
-    borderWidth: 1.5,
-    borderColor: '#ef4444',
-    gap: 8,
-  },
-  logoutText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#ef4444',
-  },
-  versionContainer: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  versionText: {
-    fontSize: 12,
-    color: '#9ca3af',
+  logoutTxt: { fontSize: 15, fontWeight: '700', color: '#EF4444' },
+
+  fab: {
+    position: 'absolute', bottom: 90, right: 20,
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: C.accent,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: C.accent, shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4, shadowRadius: 12, elevation: 8,
   },
 });

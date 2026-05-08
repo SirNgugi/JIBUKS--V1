@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,110 +8,258 @@ import {
   SafeAreaView,
   Platform,
   StatusBar,
-  Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/contexts/AuthContext';
 import apiService from '@/services/api';
-import { useCallback } from 'react';
 
-const { width } = Dimensions.get('window');
+// ─── Design tokens ──────────────────────────────────────────────────────────
+const C = {
+  primary: '#1a3a8f',
+  primaryDark: '#0e2470',
+  accent: '#F97316',
+  gold: '#FFAA00',
+  success: '#22C55E',
+  danger: '#EF4444',
+  warn: '#F59E0B',
+  white: '#ffffff',
+  bg: '#F5F7FA',
+  card: '#ffffff',
+  text: '#1F2937',
+  textMid: '#374151',
+  textLight: '#6B7280',
+  border: '#E5E7EB',
+  track: '#E9ECEF',
+};
 
+// ─── Mock fallbacks ──────────────────────────────────────────────────────────
+const MOCK_BUDGETS = [
+  { name: 'Food & Groceries', pct: 60 },
+  { name: 'Housing', pct: 100 },
+];
+const MOCK_GOALS = [
+  { name: 'Emergency Fund', currentAmount: 45000, targetAmount: 100000 },
+  { name: 'New Car Fund', currentAmount: 200000, targetAmount: 500000 },
+];
+const MOCK_TX = [
+  { type: 'EXPENSE', amount: 8450, description: 'Carrefour Supermarket', date: new Date().toISOString() },
+  { type: 'INCOME', amount: 120000, description: 'Salary Deposit', date: new Date(Date.now() - 86400000).toISOString() },
+  { type: 'EXPENSE', amount: 1200, description: 'Uber Ride', date: new Date(Date.now() - 2 * 86400000).toISOString() },
+];
+
+// ─── Circular progress ring (quadrant-based, no SVG needed) ──────────────────
+function RingProgress({ pct, size = 88, color = C.accent }: { pct: number; size?: number; color?: string }) {
+  const bw = 7;
+  const p = Math.min(Math.max(pct, 0), 100);
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{
+        position: 'absolute', width: size, height: size, borderRadius: size / 2,
+        borderWidth: bw,
+        borderTopColor:    p > 12  ? color : C.track,
+        borderRightColor:  p > 37  ? color : C.track,
+        borderBottomColor: p > 62  ? color : C.track,
+        borderLeftColor:   p > 87  ? color : C.track,
+        transform: [{ rotate: '-45deg' }],
+      }} />
+      <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>{p}%</Text>
+    </View>
+  );
+}
+
+// ─── Budget row ──────────────────────────────────────────────────────────────
+function BudgetRow({ name, pct }: { name: string; pct: number }) {
+  const over = pct >= 100;
+  const icon: any = name.toLowerCase().includes('food') ? 'restaurant'
+    : name.toLowerCase().includes('hous') ? 'home'
+    : name.toLowerCase().includes('trans') ? 'car'
+    : 'wallet';
+  return (
+    <View style={[s.budRow, over && s.budRowOver]}>
+      <View style={s.budIcon}>
+        <Ionicons name={icon} size={18} color={over ? C.danger : C.accent} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <View style={s.budTopRow}>
+          <Text style={s.budName}>{name}</Text>
+          <Text style={[s.budPct, over && { color: C.danger }]}>{pct}%</Text>
+        </View>
+        <View style={s.trackSm}>
+          <View style={[s.fillSm, {
+            width: `${Math.min(pct, 100)}%` as any,
+            backgroundColor: over ? C.danger : C.accent,
+          }]} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+// ─── Alert row ───────────────────────────────────────────────────────────────
+function AlertRow({
+  icon, iconBg, iconColor, title, sub,
+  action, arrow,
+}: {
+  icon: any; iconBg: string; iconColor: string; title: string; sub: string;
+  action?: { label: string; onPress: () => void };
+  arrow?: boolean;
+}) {
+  return (
+    <View style={[s.alertRow, action ? s.alertRowWarm : s.alertRowRed]}>
+      <View style={[s.alertIcon, { backgroundColor: iconBg }]}>
+        <Ionicons name={icon} size={20} color={iconColor} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={s.alertTitle}>{title}</Text>
+        <Text style={s.alertSub}>{sub}</Text>
+      </View>
+      {action && (
+        <TouchableOpacity style={s.alertBtn} onPress={action.onPress}>
+          <Text style={s.alertBtnText}>{action.label}</Text>
+        </TouchableOpacity>
+      )}
+      {arrow && <Ionicons name="chevron-forward" size={18} color={C.textLight} />}
+    </View>
+  );
+}
+
+// ─── Activity row ─────────────────────────────────────────────────────────────
+function ActivityRow({ tx }: { tx: any }) {
+  const isIncome = tx.type === 'INCOME';
+  const amt: number = typeof tx.amount === 'number' ? tx.amount : 0;
+  const label = tx.description || tx.category || 'Transaction';
+  const icon: any = isIncome ? 'arrow-down-circle'
+    : label.toLowerCase().includes('uber') || label.toLowerCase().includes('ride') ? 'car'
+    : label.toLowerCase().includes('super') || label.toLowerCase().includes('shop') ? 'cart'
+    : 'receipt';
+  const dateTxt = tx.date
+    ? new Date(tx.date).toLocaleDateString('en-KE', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : '';
+
+  return (
+    <View style={s.actRow}>
+      <View style={[s.actIcon, { backgroundColor: isIncome ? '#F0FDF4' : '#FEF2F2' }]}>
+        <Ionicons name={icon} size={22} color={isIncome ? C.success : C.danger} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={s.actName} numberOfLines={1}>{label}</Text>
+        <Text style={s.actDate}>{dateTxt}</Text>
+      </View>
+      <Text style={[s.actAmt, { color: isIncome ? C.success : C.danger }]}>
+        {isIncome ? '+' : ''}KES {amt.toLocaleString('en-KE')}
+      </Text>
+    </View>
+  );
+}
+
+// ─── Main screen ─────────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const [greeting, setGreeting] = useState('Good Morning');
-  const [chequeSummary, setChequeSummary] = useState({
-    count: 0,
-    totalAmount: 0,
-    bankBalance: 0,
-    realAvailable: 0,
-  });
-  const [loadingCheques, setLoadingCheques] = useState(false);
+  const [dashData, setDashData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Use useFocusEffect ensures data refreshes when navigating back to dashboard
-  useFocusEffect(
-    useCallback(() => {
-      if (user?.tenantId) {
-        fetchChequeSummary();
-      }
-    }, [user?.tenantId])
-  );
+  useFocusEffect(useCallback(() => {
+    loadDashboard();
+  }, [user?.tenantId]));
 
-  useEffect(() => {
-    const hour = new Date().getHours();
-    if (hour < 12) setGreeting('Good Morning');
-    else if (hour < 18) setGreeting('Good Afternoon');
-    else setGreeting('Good Evening');
-  }, []);
-
-  const fetchChequeSummary = async () => {
-    if (!user?.tenantId) return;
-
+  const loadDashboard = async () => {
     try {
-      setLoadingCheques(true);
-      const summary = await apiService.getChequeSummary(user.tenantId);
-      setChequeSummary(summary);
-    } catch (error) {
-      console.error('Error fetching cheque summary:', error);
+      setLoading(true);
+      const res = await apiService.getDashboard();
+      setDashData(res);
+    } catch {
+      // falls back to mock data below
     } finally {
-      setLoadingCheques(false);
+      setLoading(false);
     }
   };
 
-  // Mock Data
-  const recentActivities = [
-    { id: 1, title: 'Cheque #204 Cleared', date: 'Today, 10:23 AM', type: 'success', amount: 'KES 500' },
-    { id: 2, title: 'New Supplier Added', date: 'Yesterday, 4:15 PM', type: 'info', amount: '' },
-    { id: 3, title: 'Rent Payment Pending', date: 'Jan 10, 2026', type: 'warning', amount: 'KES 25,000' },
-  ];
-
-  const COLORS = {
-    primary: '#122f8a',
-    secondary: '#fe9900',
-    white: '#ffffff',
-    bg: '#F3F4F6',
-    text: '#1F2937',
-    textLight: '#6B7280',
-    border: '#E5E7EB',
-    danger: '#EF4444',
-  };
+  const summary = dashData?.summary ?? { totalIncome: 142500, totalExpenses: 8000, balance: 142500 };
+  const goals = dashData?.goals?.slice(0, 4) ?? MOCK_GOALS;
+  const budgets = dashData?.categorySpending?.slice(0, 3) ?? MOCK_BUDGETS;
+  const recentTx = dashData?.recentTransactions?.slice(0, 3) ?? MOCK_TX;
+  const budgetUsedPct = summary.totalIncome > 0
+    ? Math.min(Math.round((summary.totalExpenses / summary.totalIncome) * 100), 100)
+    : 79;
+  const familyName = dashData?.familyName
+    ?? (user?.name ? `The ${user.name.split(' ').pop()} Family` : 'The Otieno Family');
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#122f8a" />
+    <SafeAreaView style={s.root}>
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
-      {/* Scrollable Content */}
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Creative Header Section */}
-        <View style={styles.headerContainer}>
-          <LinearGradient
-            colors={['#122f8a', '#0a1a5c']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.header}
-          >
-            {/* Decorative Background Circles */}
-            <View style={styles.circle1} />
-            <View style={styles.circle2} />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
 
-            {/* Top Bar: Greeting & Notification */}
-            <View style={styles.headerTop}>
-              <View>
-                <Text style={styles.greetingText}>{greeting},</Text>
-                <Text style={styles.userName}>{user?.name || 'Valued Member'}</Text>
+        {/* ── HEADER ───────────────────────────────────────────────── */}
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={s.header}>
+          <View style={s.headerRow}>
+            {/* Avatar + family name */}
+            <View style={s.avatarGroup}>
+              <View style={s.avatarCircle}>
+                <Ionicons name="people" size={22} color={C.accent} />
               </View>
-              <TouchableOpacity style={styles.notificationBtn}>
-                <Ionicons name="notifications-outline" size={24} color="#ffffff" />
-                <View style={styles.notificationBadge} />
-              </TouchableOpacity>
+              <Text style={s.familyName}>{familyName}</Text>
             </View>
+
+            {/* Bell */}
+            <TouchableOpacity style={s.bell}>
+              <Ionicons name="notifications" size={20} color={C.white} />
+              <View style={s.bellBadge}>
+                <Text style={s.bellBadgeText}>6</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+
+        {loading && (
+          <View style={{ alignItems: 'center', paddingVertical: 16 }}>
+            <ActivityIndicator size="small" color={C.primary} />
+          </View>
+        )}
+
+        {/* ── AVAILABLE THIS MONTH ─────────────────────────────────── */}
+        <View style={s.balCard}>
+          <Text style={s.balLabel}>AVAILABLE THIS MONTH</Text>
+          <Text style={s.balAmount}>
+            KES {summary.balance.toLocaleString('en-KE', { minimumFractionDigits: 0 })}
+          </Text>
+          <View style={s.balStats}>
+            <View style={s.balStat}>
+              <Ionicons name="arrow-up" size={13} color={C.success} />
+              <Text style={[s.balStatTxt, { color: C.success }]}>
+                +KES {(summary.totalIncome / 1000).toFixed(0)}k
+              </Text>
+            </View>
+            <View style={s.balStat}>
+              <Ionicons name="arrow-down" size={13} color={C.danger} />
+              <Text style={[s.balStatTxt, { color: C.danger }]}>
+                -KES {(summary.totalExpenses / 1000).toFixed(0)}k
+              </Text>
+            </View>
+          </View>
+          <View style={s.budgetMeta}>
+            <Text style={s.budgetMetaLabel}>MONTHLY BUDGET USED</Text>
+            <Text style={s.budgetMetaPct}>{budgetUsedPct}%</Text>
+          </View>
+          <View style={s.trackLg}>
+            <View style={[s.fillLg, {
+              width: `${budgetUsedPct}%` as any,
+              backgroundColor: budgetUsedPct >= 90 ? C.danger : C.accent,
+            }]} />
+          </View>
+        </View>
+
+        {/* ── BUDGET SNAPSHOT ──────────────────────────────────────── */}
+        <View style={s.section}>
+          <View style={s.sectionHeader}>
+            <Text style={s.sectionTitle}>Budget Snapshot</Text>
+            <TouchableOpacity onPress={() => router.push('/expenses' as any)}>
+              <Text style={s.link}>View all</Text>
+
 
             {/* Creative Financial Dashboard Card */}
             <View style={styles.financialCard}>
@@ -233,10 +381,39 @@ export default function HomeScreen() {
                 <MaterialCommunityIcons name="cash-minus" size={26} color="#059669" />
               </View>
               <Text style={styles.actionLabel}>Cash Out</Text>
-            </TouchableOpacity>
 
+            </TouchableOpacity>
           </View>
+          {budgets.map((b: any, i: number) => (
+            <BudgetRow
+              key={i}
+              name={b.category || b.name}
+              pct={b.pct ?? (b.budget > 0 ? Math.min(Math.round((b.spent / b.budget) * 100), 100) : 0)}
+            />
+          ))}
         </View>
+
+
+        {/* ── SAVINGS GOALS ────────────────────────────────────────── */}
+        <View style={s.section}>
+          <View style={s.sectionHeader}>
+            <Text style={s.sectionTitle}>Savings Goals</Text>
+            <TouchableOpacity onPress={() => router.push('/financial-goals' as any)}>
+              <Text style={s.link}>Manage</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -4 }}>
+            {goals.map((g: any, i: number) => {
+              const pct = g.targetAmount > 0
+                ? Math.min(Math.round((g.currentAmount / g.targetAmount) * 100), 100)
+                : 0;
+              const color = [C.success, C.accent, C.warn, C.primary][i % 4];
+              return (
+                <TouchableOpacity key={i} style={s.goalCard} onPress={() => router.push('/financial-goals' as any)}>
+                  <RingProgress pct={pct} size={85} color={color} />
+                  <Text style={s.goalName} numberOfLines={1}>{g.name}</Text>
+                  <Text style={s.goalSub}>
+                    KES {(g.currentAmount / 1000).toFixed(0)}k / {(g.targetAmount / 1000).toFixed(0)}k
 
 
 
@@ -256,387 +433,210 @@ export default function HomeScreen() {
                   <Text style={styles.pendingChequesTitle}>Pending Cheques</Text>
                   <Text style={styles.pendingChequesSubtitle}>
                     {chequeSummary.count} {chequeSummary.count === 1 ? 'cheque' : 'cheques'} waiting to clear
+
                   </Text>
-                </View>
-              </View>
-              <View style={styles.pendingChequesRight}>
-                <Text style={styles.pendingChequesAmount}>
-                  KES {chequeSummary.totalAmount.toLocaleString('en-KE', { minimumFractionDigits: 0 })}
-                </Text>
-                <View style={styles.pendingChequesBadge}>
-                  <Text style={styles.pendingChequesBadgeText}>{chequeSummary.count}</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Recent Activity */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Recent</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAllText}>Show All</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.activityList}>
-            {recentActivities.map((item, index) => (
-              <View key={item.id}>
-                <TouchableOpacity style={styles.activityItem}>
-                  <View style={[
-                    styles.activityIcon,
-                    item.type === 'success' ? { backgroundColor: '#dcfce7' } :
-                      item.type === 'warning' ? { backgroundColor: '#fef3c7' } :
-                        { backgroundColor: '#e0f2fe' }
-                  ]}>
-                    <Ionicons
-                      name={
-                        item.type === 'success' ? 'checkmark' :
-                          item.type === 'warning' ? 'time' : 'information'
-                      }
-                      size={20}
-                      color={
-                        item.type === 'success' ? '#15803d' :
-                          item.type === 'warning' ? '#b45309' : '#0369a1'
-                      }
-                    />
-                  </View>
-                  <View style={styles.activityContent}>
-                    <Text style={styles.activityTitle}>{item.title}</Text>
-                    <Text style={styles.activityDate}>{item.date}</Text>
-                  </View>
-                  {item.amount ? (
-                    <Text style={styles.activityAmount}>{item.amount}</Text>
-                  ) : null}
                 </TouchableOpacity>
-                {index < recentActivities.length - 1 && <View style={styles.separator} />}
+              );
+            })}
+            <TouchableOpacity style={[s.goalCard, s.goalAdd]} onPress={() => router.push('/financial-goals' as any)}>
+              <View style={s.goalAddIcon}>
+                <Ionicons name="add" size={28} color={C.primary} />
+              </View>
+              <Text style={s.goalName}>Add Goal</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+
+        {/* ── UPCOMING ALERTS ──────────────────────────────────────── */}
+        <View style={s.section}>
+          <View style={s.sectionHeader}>
+            <Text style={s.sectionTitle}>Upcoming Alerts</Text>
+            <TouchableOpacity>
+              <Text style={s.link}>View all</Text>
+            </TouchableOpacity>
+          </View>
+          <AlertRow
+            icon="flash"
+            iconBg="#FFF9E6"
+            iconColor={C.warn}
+            title="Electricity Bill"
+            sub="Due in 3 days · KES 4,200"
+            action={{ label: 'Pay Now', onPress: () => router.push('/add-expense' as any) }}
+          />
+          <View style={{ height: 10 }} />
+          <AlertRow
+            icon="warning"
+            iconBg="#FFF0F0"
+            iconColor={C.danger}
+            title="Food Budget Low"
+            sub="KES 800 remaining"
+            arrow
+          />
+        </View>
+
+        {/* ── RECENT ACTIVITY ──────────────────────────────────────── */}
+        <View style={s.section}>
+          <View style={s.sectionHeader}>
+            <Text style={s.sectionTitle}>Recent Activity</Text>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/transactions' as any)}>
+              <Text style={s.link}>See History</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={s.actList}>
+            {recentTx.map((tx: any, i: number, arr: any[]) => (
+              <View key={i}>
+                <ActivityRow tx={tx} />
+                {i < arr.length - 1 && <View style={s.sep} />}
               </View>
             ))}
           </View>
         </View>
 
-        {/* Extra Height for Tab Bar */}
-        <View style={{ height: 80 }} />
-
+        {/* Bottom padding for FAB + tab bar */}
+        <View style={{ height: 110 }} />
       </ScrollView>
+
+      {/* ── FAB ──────────────────────────────────────────────────── */}
+      <TouchableOpacity style={s.fab} onPress={() => router.push('/add-expense' as any)}>
+        <Ionicons name="add" size={30} color={C.white} />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  content: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 20,
-  },
-  headerContainer: {
-    marginBottom: 20,
-    overflow: 'hidden',
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-  },
+// ─── Styles ──────────────────────────────────────────────────────────────────
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: C.bg },
+  scroll: { paddingBottom: 20 },
+
+  // Header
   header: {
-    paddingTop: Platform.OS === 'android' ? 60 : 60,
-    paddingBottom: 40,
+    paddingTop: Platform.OS === 'android' ? 50 : 54,
+    paddingBottom: 22,
     paddingHorizontal: 20,
-    position: 'relative',
   },
-  circle1: {
-    position: 'absolute',
-    top: -50,
-    right: -50,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-  },
-  circle2: {
-    position: 'absolute',
-    bottom: -50,
-    left: -20,
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-    zIndex: 10,
-  },
-  greetingText: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.9)',
-    fontWeight: '500',
-  },
-  userName: {
-    fontSize: 24,
-    color: '#ffffff',
-    fontWeight: 'bold',
-  },
-  notificationBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  avatarGroup: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  avatarCircle: {
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 2, borderColor: C.accent,
+    alignItems: 'center', justifyContent: 'center',
   },
-  notificationBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 12,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#fe9900',
-    borderWidth: 1,
-    borderColor: '#ffffff',
-  },
-  financialCard: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 24,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    zIndex: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-  },
-  mainBalanceSection: {
-    alignItems: 'flex-start',
-    marginBottom: 20,
-  },
-  balanceLabel: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.8)',
-    marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    fontWeight: '600',
-  },
-  balanceAmount: {
-    fontSize: 32,
-    color: '#ffffff',
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  divider: {
-    height: 1,
+  familyName: { fontSize: 18, fontWeight: '700', color: C.gold },
+  bell: {
+    width: 42, height: 42, borderRadius: 21,
     backgroundColor: 'rgba(255,255,255,0.15)',
-    marginBottom: 20,
+    alignItems: 'center', justifyContent: 'center',
   },
-  statsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  bellBadge: {
+    position: 'absolute', top: 6, right: 6,
+    width: 18, height: 18, borderRadius: 9,
+    backgroundColor: C.accent,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: C.primary,
   },
-  statItem: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
+  bellBadgeText: { fontSize: 9, fontWeight: '800', color: C.white },
+
+  // Balance card
+  balCard: {
+    marginHorizontal: 16, marginTop: -2, marginBottom: 20,
+    backgroundColor: C.card, borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08, shadowRadius: 12, elevation: 4,
   },
-  statIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-  statLabel: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.7)',
-    marginBottom: 2,
-    fontWeight: '500',
-  },
-  statValue: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  verticalDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    marginHorizontal: 12,
-  },
-  sectionContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1e293b',
-    letterSpacing: 0.5,
-  },
-  seeAllText: {
-    fontSize: 13,
-    color: '#122f8a',
-    fontWeight: '600',
-  },
-  actionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  actionCard: {
-    width: '31%', // 3 Columns
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#64748b',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
-    marginBottom: 12,
-  },
-  actionIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    alignItems: 'center',
-    justifyContent: 'center',
+  balLabel: { fontSize: 10, color: C.textLight, letterSpacing: 1.2, fontWeight: '600', marginBottom: 6 },
+  balAmount: { fontSize: 32, fontWeight: '800', color: C.text, marginBottom: 10 },
+  balStats: { flexDirection: 'row', gap: 16, marginBottom: 16 },
+  balStat: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  balStatTxt: { fontSize: 13, fontWeight: '600' },
+  budgetMeta: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  budgetMetaLabel: { fontSize: 10, color: C.textLight, letterSpacing: 1, fontWeight: '600' },
+  budgetMetaPct: { fontSize: 12, fontWeight: '700', color: C.text },
+  trackLg: { height: 8, backgroundColor: C.track, borderRadius: 4, overflow: 'hidden' },
+  fillLg: { height: 8, borderRadius: 4 },
+
+  // Section
+  section: { paddingHorizontal: 16, marginBottom: 24 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: C.text },
+  link: { fontSize: 13, fontWeight: '600', color: C.primary },
+
+  // Budget row
+  budRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: C.card, borderRadius: 14, padding: 14,
     marginBottom: 10,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
   },
-  actionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#334155',
-    textAlign: 'center',
+  budRowOver: { borderWidth: 1.5, borderColor: '#FECACA', backgroundColor: '#FFF5F5' },
+  budIcon: {
+    width: 40, height: 40, borderRadius: 10,
+    backgroundColor: '#FFF7ED',
+    alignItems: 'center', justifyContent: 'center',
   },
-  activityList: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 8,
-    shadowColor: '#64748b',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  activityItem: {
-    flexDirection: 'row',
+  budTopRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  budName: { fontSize: 14, fontWeight: '600', color: C.text },
+  budPct: { fontSize: 13, fontWeight: '700', color: C.textMid },
+  trackSm: { height: 6, backgroundColor: C.track, borderRadius: 3, overflow: 'hidden' },
+  fillSm: { height: 6, borderRadius: 3 },
+
+  // Goals
+  goalCard: {
+    width: 130, marginRight: 12, marginHorizontal: 4,
+    backgroundColor: C.card, borderRadius: 16, padding: 14,
     alignItems: 'center',
-    padding: 16,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
   },
-  activityIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
+  goalAdd: { justifyContent: 'center', borderWidth: 1.5, borderColor: C.border, borderStyle: 'dashed', backgroundColor: '#FAFAFA' },
+  goalAddIcon: {
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 8,
   },
-  activityContent: {
-    flex: 1,
+  goalName: { fontSize: 12, fontWeight: '600', color: C.text, marginTop: 8, textAlign: 'center' },
+  goalSub: { fontSize: 11, color: C.textLight, marginTop: 3, textAlign: 'center' },
+
+  // Alerts
+  alertRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    borderRadius: 14, padding: 14, borderWidth: 1,
   },
-  activityTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1e293b',
-    marginBottom: 2,
+  alertRowWarm: { backgroundColor: '#FFFBF0', borderColor: '#FDE68A' },
+  alertRowRed: { backgroundColor: '#FFF5F5', borderColor: '#FECACA' },
+  alertIcon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  alertTitle: { fontSize: 14, fontWeight: '600', color: C.text, marginBottom: 2 },
+  alertSub: { fontSize: 12, color: C.textLight },
+  alertBtn: {
+    backgroundColor: C.accent, borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 7,
   },
-  activityDate: {
-    fontSize: 12,
-    color: '#94a3b8',
+  alertBtnText: { fontSize: 12, fontWeight: '700', color: C.white },
+
+  // Activity
+  actList: {
+    backgroundColor: C.card, borderRadius: 16,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
+    overflow: 'hidden',
   },
-  activityAmount: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1e293b',
-  },
-  separator: {
-    height: 1,
-    backgroundColor: '#f1f5f9',
-    marginLeft: 74,
-  },
-  pendingChequesWidget: {
-    backgroundColor: '#fff7ed',
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 2,
-    borderColor: '#fed7aa',
-    shadowColor: '#d97706',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  pendingChequesLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  pendingChequesIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#ffffff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
-    borderWidth: 2,
-    borderColor: '#fed7aa',
-  },
-  pendingChequesTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#92400e',
-    marginBottom: 2,
-  },
-  pendingChequesSubtitle: {
-    fontSize: 13,
-    color: '#b45309',
-  },
-  pendingChequesBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#d97706',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pendingChequesBadgeText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#ffffff',
-  },
-  pendingChequesRight: {
-    alignItems: 'flex-end',
-    gap: 8,
-  },
-  pendingChequesAmount: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#92400e',
+  actRow: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14 },
+  actIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  actName: { fontSize: 14, fontWeight: '600', color: C.text, marginBottom: 2 },
+  actDate: { fontSize: 11, color: C.textLight },
+  actAmt: { fontSize: 14, fontWeight: '700' },
+  sep: { height: 1, backgroundColor: C.border, marginLeft: 72 },
+
+  // FAB
+  fab: {
+    position: 'absolute', bottom: 90, right: 20,
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: C.accent,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: C.accent, shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4, shadowRadius: 12, elevation: 8,
   },
 });
