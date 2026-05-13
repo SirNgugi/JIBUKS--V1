@@ -1,10 +1,7 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 
-import { Stack, useRouter } from 'expo-router';
-import { LogBox, View } from 'react-native';
-
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { LogBox } from 'react-native';
+import { LogBox, View } from 'react-native';
 
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
@@ -65,13 +62,13 @@ function AppNavigator() {
         resetTimer();
         return false; // Don't capture the event — let children handle it normally
       }}
-    
+    >
       <Stack
         screenOptions={{
           animation: 'slide_from_right',
           animationDuration: 500,
         }}
-      
+      >
         <Stack.Screen name="slideshow" options={{ headerShown: false }} />
         <Stack.Screen name="auth" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ headerShown: false }} />
@@ -107,6 +104,16 @@ function AppNavigator() {
         <Stack.Screen name="family-settings" options={{ headerShown: false }} />
         <Stack.Screen name="edit-member-permissions" options={{ headerShown: false }} />
         <Stack.Screen name="edit-family-profile" options={{ headerShown: false }} />
+        <Stack.Screen name="member-details" options={{ headerShown: false }} />
+        <Stack.Screen name="member-added-success" options={{ headerShown: false }} />
+        <Stack.Screen name="budget-alerts" options={{ headerShown: false }} />
+        <Stack.Screen name="budget-history" options={{ headerShown: false }} />
+        <Stack.Screen name="groups" options={{ headerShown: false }} />
+        <Stack.Screen name="group-members" options={{ headerShown: false }} />
+        <Stack.Screen name="add-group-members" options={{ headerShown: false }} />
+        <Stack.Screen name="group-detail" options={{ headerShown: false }} />
+        <Stack.Screen name="group-activity" options={{ headerShown: false }} />
+        <Stack.Screen name="create-group" options={{ headerShown: false }} />
         <Stack.Screen name="manage" options={{ headerShown: false }} />
         <Stack.Screen name="accounts" options={{ headerShown: false }} />
         <Stack.Screen name="income" options={{ headerShown: false }} />
@@ -120,6 +127,7 @@ function AppNavigator() {
       <Toast config={toastConfig} visibilityTime={2000} />
     </View>
   );
+}
 
 function AuthNavigationGuard() {
   const router = useRouter();

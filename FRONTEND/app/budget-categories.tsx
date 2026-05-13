@@ -86,7 +86,9 @@ export default function BudgetCategoriesScreen() {
                             <Ionicons name="arrow-back" size={20} color={C.gold} />
                         </TouchableOpacity>
                         <Text style={s.headerTitle}>BUDGET CATEGORIES</Text>
-                        <View style={{ width: 36 }} />
+                        <TouchableOpacity style={s.backBtn} onPress={() => router.push('/budget-alerts' as any)}>
+                            <Ionicons name="notifications" size={20} color={C.gold} />
+                        </TouchableOpacity>
                     </View>
                 </SafeAreaView>
             </LinearGradient>
@@ -103,7 +105,7 @@ export default function BudgetCategoriesScreen() {
                             <Text style={s.budgetMonthTitle}>Budgets – {monthLabel}</Text>
                             <Text style={s.budgetMonthSub}>Monthly Family Overview</Text>
                         </View>
-                        <TouchableOpacity>
+                        <TouchableOpacity onPress={() => router.push('/budget-history' as any)}>
                             <Text style={s.historyLink}>History</Text>
                         </TouchableOpacity>
                     </View>

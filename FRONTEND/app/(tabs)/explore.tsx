@@ -47,7 +47,7 @@ const SECTIONS = [
       {
         icon: 'people-circle', iconBg: '#F0FDF4', iconColor: '#16A34A',
         title: 'Groups (Chama)', sub: 'Track contributions and group savings',
-        route: '/manage',
+        route: '/groups',
       },
     ],
   },
@@ -69,6 +69,11 @@ const SECTIONS = [
   {
     label: 'INSIGHTS',
     items: [
+      {
+        icon: 'pie-chart', iconBg: '#EFF6FF', iconColor: '#3B82F6',
+        title: 'Reports', sub: 'Spending breakdown and smart insights',
+        route: '/reports',
+      },
       {
         icon: 'trending-up', iconBg: '#F0FDF4', iconColor: '#16A34A',
         title: 'Net Worth', sub: 'Track assets and liabilities',

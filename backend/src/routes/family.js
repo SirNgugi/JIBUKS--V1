@@ -12,6 +12,17 @@ import {
     getDashboardStats,
     updateFamilyProfile
 } from '../controllers/familySettingsController.js';
+import {
+    listGroups,
+    createGroup,
+    getGroup,
+    contribute,
+    getActivity,
+    addGroupMember,
+    removeGroupMember,
+    updateGroup,
+    deleteGroup,
+} from '../controllers/familyGroupController.js';
 import { upload } from '../middleware/upload.js';
 
 const router = Router();
@@ -46,5 +57,16 @@ router.delete('/members/:memberId', removeMember);
 // Family Actions
 router.delete('/leave', leaveFamily);
 router.delete('/', deleteFamily);
+
+// ── Family Groups / Chama ────────────────────────────────────────────────
+router.get('/groups',                           listGroups);
+router.post('/groups',                          createGroup);
+router.get('/groups/:id',                       getGroup);
+router.put('/groups/:id',                       updateGroup);
+router.delete('/groups/:id',                    deleteGroup);
+router.post('/groups/:id/contribute',           contribute);
+router.get('/groups/:id/activity',              getActivity);
+router.post('/groups/:id/members',              addGroupMember);
+router.delete('/groups/:id/members/:memberId',  removeGroupMember);
 
 export default router;

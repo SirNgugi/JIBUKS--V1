@@ -50,6 +50,7 @@ model Tenant {
   loans                 Loan[]
   vatRates              VatRate[]
   transactions          Transaction[]
+  groups                Group[]
 
   @@map("tenants")
 }
@@ -230,6 +231,9 @@ model User {
   // Fixed Assets relations
   ownedAssets           FixedAsset[]           @relation("AssetOwner")
   createdAssets         FixedAsset[]           @relation("AssetCreator")
+  // Family Group relations
+  groupMemberships      GroupMember[]
+  groupContributions    GroupContribution[]
 
   resetPasswordOtp      String?                @map("reset_password_otp")
   resetPasswordExpires  DateTime?              @map("reset_password_expires")
@@ -1328,6 +1332,92 @@ model PlatformDeviceShare {
   @@unique([rangeDays, name])
   @@index([rangeDays, snapshotAt])
   @@map("platform_device_shares")
+}
+
+// ============================================
+// FAMILY GROUPS / CHAMA
+// ============================================
+
+enum GroupType {
+  CHAMA
+  SAVINGS
+  INVESTMENT
+  WELFARE
+}
+
+enum GroupStatus {
+  ACTIVE
+  PAUSED
+  CLOSED
+}
+
+enum GroupMemberRole {
+  ADMIN
+  TREASURER
+  MEMBER
+}
+
+enum GroupContributionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  MISSED
+}
+
+model Group {
+  id            Int           @id @default(autoincrement())
+  tenantId      Int           @map("tenant_id")
+  name          String
+  description   String?
+  target        Decimal       @default(0)
+  saved         Decimal       @default(0)
+  type          GroupType     @default(CHAMA)
+  color         String?       @default("#1a3a8f")
+  status        GroupStatus   @default(ACTIVE)
+  frequency     String?       // MONTHLY, WEEKLY, etc.
+  contributionAmount Decimal? @map("contribution_amount")
+  treasurerName String?       @map("treasurer_name")
+  treasurerPhone String?      @map("treasurer_phone")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  members       GroupMember[]
+  contributions GroupContribution[]
+
+  @@index([tenantId])
+  @@map("groups")
+}
+
+model GroupMember {
+  id        Int             @id @default(autoincrement())
+  groupId   Int             @map("group_id")
+  userId    Int             @map("user_id")
+  role      GroupMemberRole @default(MEMBER)
+  joinedAt  DateTime        @default(now()) @map("joined_at")
+  group     Group           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([groupId])
+  @@index([userId])
+  @@map("group_members")
+}
+
+model GroupContribution {
+  id        Int                     @id @default(autoincrement())
+  groupId   Int                     @map("group_id")
+  userId    Int                     @map("user_id")
+  amount    Decimal
+  method    String?                 @default("M-PESA")
+  status    GroupContributionStatus @default(COMPLETED)
+  note      String?
+  createdAt DateTime                @default(now()) @map("created_at")
+  group     Group                   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([groupId])
+  @@index([userId])
+  @@map("group_contributions")
 }
 
 // ============================================
