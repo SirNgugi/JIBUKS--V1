@@ -1415,6 +1415,13 @@ class ApiService {
     return this.request(`/family/budgets/${id}`, { method: 'DELETE' });
   }
 
+  async saveFamilyBudgets(budgets: { category: string; amount: number }[]): Promise<any> {
+    return this.request('/family/budgets', {
+      method: 'POST',
+      body: JSON.stringify({ budgets }),
+    });
+  }
+
   // ─── Family Groups / Chama APIs ───────────────────────────────────────────
 
   async getFamilyGroups(): Promise<any[]> {
