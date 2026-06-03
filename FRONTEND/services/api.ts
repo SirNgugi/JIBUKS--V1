@@ -824,12 +824,7 @@ class ApiService {
 
 
   async getCategories(): Promise<Category[]> {
-    try {
-      return await this.request<Category[]>('/categories');
-    } catch (error) {
-      console.warn('getCategories falling back to mock categories');
-      return this.mockCategories;
-    }
+    return this.request<Category[]>('/categories');
   }
 
   async createCategory(data: { name: string; type: string; icon?: string; color?: string }): Promise<Category> {
@@ -840,12 +835,7 @@ class ApiService {
   }
 
   async getPaymentMethods(): Promise<PaymentMethod[]> {
-    try {
-      return await this.request<PaymentMethod[]>('/payment-methods');
-    } catch (error) {
-      console.warn('getPaymentMethods falling back to mock payment methods');
-      return this.mockPaymentMethods;
-    }
+    return this.request<PaymentMethod[]>('/payment-methods');
   }
 
   async getTransactions(params: { type?: TransactionType; limit?: number } = {}): Promise<Transaction[]> {
