@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import FABMenu from '@/components/FABMenu';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function RecordsScreen() {
@@ -101,6 +102,8 @@ export default function RecordsScreen() {
         {/* Bottom Spacing */}
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      <FABMenu />
     </SafeAreaView>
   );
 }
