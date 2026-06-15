@@ -12,10 +12,20 @@ const Slideshow = () => {
   const router = useRouter()
   const { user, isInitializing } = useAuth()
 
-  // Redirect to dashboard if already logged in
+  // Redirect to appropriate route if already logged in
   useEffect(() => {
     if (!isInitializing && user) {
-      router.replace(getAuthenticatedHomeRoute(user))
+      const determineRoute = async () => {
+        try {
+          const route = await getAuthenticatedHomeRoute(user)
+          router.replace(route)
+        } catch (error) {
+          console.error('Error determining route:', error)
+          router.replace('/welcome')
+        }
+      }
+      
+      determineRoute()
     }
   }, [user, isInitializing])
 

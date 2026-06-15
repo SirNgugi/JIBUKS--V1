@@ -36,8 +36,19 @@ const C = {
   track: '#E9ECEF',
 };
 
+// ─── Goal Icons ─────────────────────────────────────────────────────────────
+const GOAL_ICONS: Record<string, { name: any; color: string }> = {
+  car:        { name: 'car-sport',  color: C.gold },
+  home:       { name: 'home',       color: C.primary },
+  education:  { name: 'school',     color: '#8B5CF6' },
+  travel:     { name: 'airplane',   color: '#06B6D4' },
+  business:   { name: 'briefcase',  color: '#10B981' },
+  emergency:  { name: 'medkit',     color: '#EF4444' },
+  default:    { name: 'flag',       color: C.primary },
+};
+
 // ─── Circular progress ring (quadrant-based, no SVG needed) ──────────────────
-function RingProgress({ pct, size = 88, color = C.accent }: { pct: number; size?: number; color?: string }) {
+function RingProgress({ pct, size = 88, color = C.accent, icon }: { pct: number; size?: number; color?: string; icon?: string }) {
   const bw = 7;
   const p = Math.min(Math.max(pct, 0), 100);
   return (
@@ -51,7 +62,15 @@ function RingProgress({ pct, size = 88, color = C.accent }: { pct: number; size?
         borderLeftColor:   p > 87  ? color : C.track,
         transform: [{ rotate: '-45deg' }],
       }} />
-      <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>{p}%</Text>
+      {icon ? (
+        <Ionicons 
+          name={GOAL_ICONS[icon.toLowerCase()]?.name || GOAL_ICONS.default.name} 
+          size={size * 0.35} 
+          color={GOAL_ICONS[icon.toLowerCase()]?.color || GOAL_ICONS.default.color} 
+        />
+      ) : (
+        <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>{p}%</Text>
+      )}
     </View>
   );
 }
@@ -290,7 +309,7 @@ export default function HomeScreen() {
                 const color = [C.success, C.accent, C.warn, C.primary][i % 4];
                 return (
                   <TouchableOpacity key={g.id ?? i} style={s.goalCard} onPress={() => router.push('/financial-goals' as any)}>
-                    <RingProgress pct={pct} size={85} color={color} />
+                    <RingProgress pct={pct} size={85} color={color} icon={g.category} />
                     <Text style={s.goalName} numberOfLines={1}>{g.name}</Text>
                     <Text style={s.goalSub}>
                       KES {(g.currentAmount / 1000).toFixed(0)}k / {(g.targetAmount / 1000).toFixed(0)}k

@@ -77,20 +77,18 @@ export default function AddExpenseScreen() {
     };
 
     return (
-        <View style={s.root}>
+        <SafeAreaView style={s.root}>
             <StatusBar barStyle="light-content" />
 
             {/* ── HEADER ── */}
             <LinearGradient colors={[C.navy, C.navyDark]} style={s.header}>
-                <SafeAreaView>
-                    <View style={s.headerRow}>
-                        <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-                            <Ionicons name="arrow-back" size={22} color={C.gold} />
-                        </TouchableOpacity>
-                        <Text style={s.headerTitle}>Add Expense</Text>
-                        <View style={{ width: 38 }} />
-                    </View>
-                </SafeAreaView>
+                <View style={s.headerRow}>
+                    <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
+                        <Ionicons name="arrow-back" size={22} color={C.gold} />
+                    </TouchableOpacity>
+                    <Text style={s.headerTitle}>Add Expense</Text>
+                    <View style={{ width: 38 }} />
+                </View>
             </LinearGradient>
 
             <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -237,7 +235,7 @@ export default function AddExpenseScreen() {
                     </View>
                 </View>
             </Modal>
-        </View>
+        </SafeAreaView>
     );
 }
 

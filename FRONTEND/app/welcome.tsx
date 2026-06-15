@@ -11,8 +11,14 @@ export default function WelcomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
 
-  const handleBegin = () => {
-    router.replace(getAuthenticatedHomeRoute(user, '/account-type'));
+  const handleBegin = async () => {
+    try {
+      const route = await getAuthenticatedHomeRoute(user, '/account-type');
+      router.replace(route);
+    } catch (error) {
+      console.error('Error determining route:', error);
+      router.replace('/account-type');
+    }
   };
 
   return (
