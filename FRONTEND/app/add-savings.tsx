@@ -55,20 +55,18 @@ export default function AddSavingsScreen() {
     };
 
     return (
-        <View style={s.root}>
+        <SafeAreaView style={s.root}>
             <StatusBar barStyle="light-content" />
 
             {/* ── HEADER ── */}
             <LinearGradient colors={[C.navy, C.navyDark]} style={s.header}>
-                <SafeAreaView>
-                    <View style={s.headerRow}>
-                        <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-                            <Ionicons name="arrow-back" size={22} color={C.gold} />
-                        </TouchableOpacity>
-                        <Text style={s.headerTitle}>Add to Savings</Text>
-                        <View style={{ width: 38 }} />
-                    </View>
-                </SafeAreaView>
+                <View style={s.headerRow}>
+                    <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
+                        <Ionicons name="arrow-back" size={22} color={C.gold} />
+                    </TouchableOpacity>
+                    <Text style={s.headerTitle}>Add to Savings</Text>
+                    <View style={{ width: 38 }} />
+                </View>
             </LinearGradient>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
@@ -129,7 +127,7 @@ export default function AddSavingsScreen() {
                     <Text style={s.footerBrand}>Apbc 🌍</Text>
                 </View>
             </ScrollView>
-        </View>
+        </SafeAreaView>
     );
 }
 

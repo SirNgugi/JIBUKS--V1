@@ -73,20 +73,18 @@ export default function AddIncomeScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
 
       {/* ── HEADER ── */}
       <LinearGradient colors={['#1a3a8f', '#0e2470']} style={styles.header}>
-        <SafeAreaView>
-          <View style={styles.headerRow}>
-            <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-              <Ionicons name="arrow-back" size={22} color="#FFAA00" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Add income</Text>
-            <View style={{ width: 38 }} />
-          </View>
-        </SafeAreaView>
+        <View style={styles.headerRow}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={22} color="#FFAA00" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Add income</Text>
+          <View style={{ width: 38 }} />
+        </View>
       </LinearGradient>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
@@ -179,7 +177,7 @@ export default function AddIncomeScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-    </View>
+    </SafeAreaView>
   );
 }
 

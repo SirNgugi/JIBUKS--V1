@@ -167,7 +167,17 @@ function AuthNavigationGuard() {
     }
 
     if (isAuthenticated && isPublicRoute) {
-      router.replace(getAuthenticatedHomeRoute(user));
+      const determineRoute = async () => {
+        try {
+          const route = await getAuthenticatedHomeRoute(user);
+          router.replace(route);
+        } catch (error) {
+          console.error('Error determining route:', error);
+          router.replace('/welcome');
+        }
+      };
+      
+      determineRoute();
     }
   }, [user, isAuthenticated, isInitializing, segments, router]);
 

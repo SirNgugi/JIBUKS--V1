@@ -84,22 +84,20 @@ export default function GoalsTabScreen() {
         : 0;
 
     return (
-        <View style={s.root}>
+        <SafeAreaView style={s.root}>
             <StatusBar barStyle="light-content" backgroundColor={C.navy} />
 
             {/* ── HEADER ── */}
             <LinearGradient colors={[C.navy, C.navyDark]} style={s.header}>
-                <SafeAreaView>
-                    <View style={s.headerRow}>
-                        <View>
-                            <Text style={s.headerTitle}>Savings Goals</Text>
-                            <Text style={s.headerSub}>{goals.length} active goal{goals.length !== 1 ? 's' : ''}</Text>
-                        </View>
-                        <TouchableOpacity style={s.addBtn} onPress={() => router.push('/add-saving-goals' as any)}>
-                            <Ionicons name="add" size={22} color={C.white} />
-                        </TouchableOpacity>
+                <View style={s.headerRow}>
+                    <View>
+                        <Text style={s.headerTitle}>Savings Goals</Text>
+                        <Text style={s.headerSub}>{goals.length} active goal{goals.length !== 1 ? 's' : ''}</Text>
                     </View>
-                </SafeAreaView>
+                    <TouchableOpacity style={s.addBtn} onPress={() => router.push('/add-saving-goals' as any)}>
+                        <Ionicons name="add" size={22} color={C.white} />
+                    </TouchableOpacity>
+                </View>
             </LinearGradient>
 
             {loading ? (
@@ -193,7 +191,7 @@ export default function GoalsTabScreen() {
             )}
 
             <FABMenu />
-        </View>
+        </SafeAreaView>
     );
 }
 

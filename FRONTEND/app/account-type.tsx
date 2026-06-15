@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, SafeAreaView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { showToast } from '@/utils/toast';
@@ -30,7 +30,7 @@ export default function AccountTypeScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Blue Header Section */}
       <LinearGradient
         colors={['#1e3a8a', '#2563eb']}
@@ -94,7 +94,7 @@ export default function AccountTypeScreen() {
           <Text style={styles.footerText}>Powered by Apbc</Text>
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 

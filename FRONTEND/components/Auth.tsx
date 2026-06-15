@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, Image, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native'
+import { StyleSheet, Text, View, Image, TouchableOpacity, Dimensions, ActivityIndicator, SafeAreaView } from 'react-native'
 import React, { useEffect } from 'react'
 import { useRouter } from 'expo-router'
 import { useAuth } from '@/contexts/AuthContext'
@@ -10,10 +10,20 @@ const Auth = () => {
   const router = useRouter()
   const { user, isInitializing } = useAuth()
 
-  // Redirect to dashboard if already logged in
+  // Redirect to appropriate route if already logged in
   useEffect(() => {
     if (!isInitializing && user) {
-      router.replace(getAuthenticatedHomeRoute(user))
+      const determineRoute = async () => {
+        try {
+          const route = await getAuthenticatedHomeRoute(user)
+          router.replace(route)
+        } catch (error) {
+          console.error('Error determining route:', error)
+          router.replace('/welcome')
+        }
+      }
+      
+      determineRoute()
     }
   }, [user, isInitializing])
 
@@ -27,7 +37,7 @@ const Auth = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Logo Section */}
       <View style={styles.logoSection}>
         <Image 
@@ -84,7 +94,7 @@ const Auth = () => {
           <Text style={styles.linkText}>Terms</Text>.
         </Text>
       </View>
-    </View>
+    </SafeAreaView>
   )
 }
 
